@@ -395,6 +395,45 @@ details summary{cursor:pointer}
 .g-foot{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:auto;padding-top:10px;border-top:1px dashed var(--line)}
 .g-foot label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);margin-bottom:4px}
 .g-foot .ins,.g-foot .prep{min-width:0}
+.dash-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:22px 26px;border-radius:18px;background:linear-gradient(120deg,color-mix(in srgb,var(--rojo) 9%,var(--panel)),var(--panel) 70%);border:1px solid var(--line)}
+.dash-hero h1{margin:2px 0 4px}
+.dash-hero p{margin:0;color:var(--fg2)}
+.dash-hero p b{color:var(--fg)}
+.dh-hi{font-size:14px;font-weight:700;color:var(--rojo);letter-spacing:.02em}
+.kp2{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+@media (max-width:1280px){.kp2{grid-template-columns:repeat(3,1fr)}}
+.k2{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:inherit;text-decoration:none;transition:transform .15s,box-shadow .15s}
+.k2:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(35,31,30,.08)}
+.k-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--tb);color:var(--tc)}
+.k-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.k2.ok{--tb:var(--ok-bg);--tc:var(--ok)} .k2.info{--tb:var(--info-bg);--tc:var(--info)} .k2.warn{--tb:var(--warn-bg);--tc:var(--warn)} .k2.crit{--tb:var(--crit-bg);--tc:var(--crit)} .k2.vino{--tb:color-mix(in srgb,var(--vino) 14%,var(--panel));--tc:var(--vino)}
+.k-tx{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.k-l{font-size:13px;color:var(--fg2)}
+.k-v{font:700 27px/1.15 var(--f-disp);font-variant-numeric:tabular-nums;color:var(--fg)}
+.k2.crit .k-v{color:var(--crit)}
+.k-de{font-size:15px;font-weight:500;color:var(--fg3)}
+.k-s{font-size:12px;color:var(--fg3);line-height:1.35;overflow:hidden;text-overflow:ellipsis}
+.k-bar{display:block;height:6px;border-radius:999px;background:var(--line2);margin-top:5px;overflow:hidden}
+.k-bar i{display:block;height:100%;background:var(--vino);border-radius:999px}
+.at-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.at2{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:11px;font-size:13.5px;color:var(--fg);text-decoration:none;background:var(--tb);transition:filter .15s}
+.at2:hover{filter:brightness(.97)}
+.at2.crit{--tb:var(--crit-bg);--tc:var(--crit)} .at2.warn{--tb:var(--warn-bg);--tc:var(--warn)} .at2.info{--tb:var(--info-bg);--tc:var(--info)}
+.at-ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--tc);color:#fff;font-weight:800;font-size:13px}
+.at-go{color:var(--tc);font-size:18px;font-weight:600}
+.agd{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.ag-day{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);margin:8px 2px 0}
+.ag-day:first-child{margin-top:0}
+.ag-day span{font-weight:600;text-transform:none;letter-spacing:0}
+.ag-day.hoy{color:var(--rojo)}
+.ag-it{display:block;padding:8px 12px 8px 14px;border-radius:11px;background:color-mix(in srgb,var(--pc) 13%,var(--panel));border-left:4px solid var(--pc);color:var(--fg);text-decoration:none;transition:filter .15s}
+.ag-it:hover{filter:brightness(.97)}
+.ag-t{font-size:14px;line-height:1.3}
+.ag-g{font-size:11.5px;font-weight:700;color:var(--fg2);margin-left:2px}
+.ag-s{font-size:12.5px;color:var(--fg2);margin-top:1px}
+.ag-sp{color:var(--crit);font-weight:600}
+.gantt .gb{border-radius:999px}
+@media (max-width:620px){.kp2{grid-template-columns:1fr 1fr}.k2{padding:12px}.k-ic{display:none}.dash-hero{padding:18px}}
 .mat{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;color:var(--fg2);letter-spacing:.02em}
 .asbtns{display:flex;gap:6px;flex:none}
 .asb{min-width:98px;padding:0 12px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:700;cursor:pointer;color:var(--fg2)}
@@ -754,7 +793,7 @@ async function resolveNames() {
   const els = [...document.querySelectorAll('[data-who]')]; if (!els.length) return; if (!user) { els.forEach(e => e.textContent = 'Alguien del equipo'); return; }
   const ids = [...new Set(els.map(e => e.dataset.who).filter(Boolean))]; if (!ids.length) return;
   const ps = await user.profiles(ids);
-  els.forEach(e => { const p = ps[e.dataset.who]; if (!p) return; e.textContent = p.isMe ? 'Tú' : (p.name || 'Alguien del equipo'); });
+  els.forEach(e => { const p = ps[e.dataset.who]; if (!p) return; e.textContent = e.dataset.first ? ((p.name || '').split(/\s+/)[0] || 'equipo') : p.isMe ? 'Tú' : (p.name || 'Alguien del equipo'); });
 }
 async function resolveAvatars() {
   const els = [...document.querySelectorAll('img[data-av]')]; if (!els.length || !user) return;
@@ -867,28 +906,34 @@ function vTablero() {
   const orgs = Object.values(S.orgs);
   const SEV = { 3:'crit', 2:'warn', 1:'info' };
   return `
-  <div class="head"><div><h1>Tablero de Educación Continua</h1><p>${fdw(TODAY)} · todo se calcula en vivo con lo que tú y tu equipo capturan</p></div>
+  <div class="dash-hero">
+    <div><div class="dh-hi">${(() => { const h = new Date().getHours(); return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'; })()}${myId ? `, <span data-who="${esc(myId)}" data-first="1">equipo</span>` : ''}</div>
+      <h1>Tablero de Educación Continua</h1>
+      <p>${fdw(TODAY)} · ${D.ses.filter(s => s.d === TODAY).length ? `hoy hay <b>${D.ses.filter(s => s.d === TODAY).length} clase${D.ses.filter(s => s.d === TODAY).length > 1 ? 's' : ''}</b>` : 'hoy no hay clases'}${A.filter(a => a.sev === 3).length ? ` · <b>${A.filter(a => a.sev === 3).length}</b> cosa${A.filter(a => a.sev === 3).length > 1 ? 's' : ''} urgente${A.filter(a => a.sev === 3).length > 1 ? 's' : ''} por atender` : ' · nada urgente por ahora'}</p></div>
     <div class="tools"><button class="btn pri w" data-act="new-gen">+ Nueva generación</button></div></div>
-  <div class="kpis">
-    <div class="card kpi"><span>Activos</span><b>${cnt('Activo')}</b><small>en curso hoy</small></div>
-    <div class="card kpi"><span>Arrancan en 90 días</span><b>${proximos.length}</b><small>${cnt('En planeación')} más en planeación</small></div>
-    <div class="card kpi"><span>Inscritos en próximos</span><b>${sumIns}${sumMeta ? `<span class="muted" style="font-size:18px"> / ${sumMeta}</span>` : ''}</b>${sumMeta ? `<div class="ins ${sumIns >= sumMeta ? 'ok' : sumIns / sumMeta >= .6 ? 'mid' : 'low'}" style="margin-top:4px"><div class="ibar"><i style="width:${Math.min(100, Math.round(sumIns / sumMeta * 100))}%"></i></div></div>` : '<small>captura metas e inscritos</small>'}</div>
-    <div class="card kpi"><span>Vendido${ingEst ? ' (estimado)' : ''}</span><b style="font-size:24px">${money(ingTot)}</b><small>cobrado ${money(ingr.reduce((a, r) => a + r.cobrado, 0))} · por cobrar ${money(ingr.reduce((a, r) => a + r.porCobrar, 0))}</small></div>
-    <div class="card kpi"><span>Pendientes vencidos</span><b style="${late ? 'color:var(--crit)' : ''}">${late}</b><small><a href="#pendientes">ver pendientes</a></small></div>
-    <div class="card kpi"><span>Próximo inicio</span><b style="font-size:22px">${prox ? (prox.dpi === 0 ? 'Hoy' : prox.dpi + ' días') : '—'}</b><small>${prox ? esc(prox.nombre) + ' · ' + fd(prox.sc.inicio, false) : 'sin fechas confirmadas'}</small></div>
+  <div class="kp2">
+    ${kpi2('play', 'Activos', cnt('Activo'), 'en curso hoy', '#diplomados', 'ok')}
+    ${kpi2('rocket', 'Arrancan en 90 días', proximos.length, `${cnt('En planeación')} más en planeación`, '#diplomados', 'info')}
+    ${kpi2('users', 'Inscritos en próximos', `${sumIns}${sumMeta ? `<span class="k-de"> / ${sumMeta}</span>` : ''}`, sumMeta ? `<span class="k-bar"><i style="width:${Math.min(100, Math.round(sumIns / sumMeta * 100))}%"></i></span>` : 'captura metas e inscritos', '#alumnos', 'vino')}
+    ${kpi2('money', `Vendido${ingEst ? ' (est.)' : ''}`, money(ingTot), `cobrado ${money(ingr.reduce((a, r) => a + r.cobrado, 0))} · por cobrar ${money(ingr.reduce((a, r) => a + r.porCobrar, 0))}`, '#cobranza', 'ok')}
+    ${kpi2('check', 'Pendientes vencidos', late, late ? 'revísalos hoy' : 'todo al día', '#pendientes', late ? 'crit' : 'ok')}
+    ${kpi2('flag', 'Próximo inicio', prox ? (prox.dpi === 0 ? 'Hoy' : `${prox.dpi} <span class="k-de">días</span>`) : '—', prox ? esc(prox.nombre) + ' · ' + fd(prox.sc.inicio, false) : 'sin fechas confirmadas', prox ? '#d-' + prox.id : '#diplomados', 'warn')}
   </div>
   <div class="grid2">
     <section class="card pad sec"><div class="sec-h"><h2>Atiende esto</h2><span class="small muted">${A.length ? A.length + ' cosas, lo más urgente primero' : ''}</span></div>
-      <div class="list">${A.length ? A.slice(0, ui.atAll ? 99 : 8).map(a => `<a class="li at" href="#${a.h}"><span class="sev ${SEV[a.sev]}"></span><div class="small" style="min-width:0;flex:1">${a.t}</div><span class="muted">›</span></a>`).join('') + (A.length > 8 && !ui.atAll ? `<button class="btn ghost sm" data-act="at-all">Ver las ${A.length - 8} restantes</button>` : '') : '<div class="empty">Nada urgente por ahora. ✓</div>'}</div>
+      <div class="at-list">${A.length ? A.slice(0, ui.atAll ? 99 : 8).map(a => `<a class="at2 ${SEV[a.sev]}" href="#${a.h}"><span class="at-ic">${a.sev === 3 ? '!' : a.sev === 2 ? '•' : 'i'}</span><div style="min-width:0;flex:1">${a.t}</div><span class="at-go">›</span></a>`).join('') + (A.length > 8 && !ui.atAll ? `<button class="btn ghost sm" data-act="at-all">Ver las ${A.length - 8} restantes</button>` : '') : '<div class="empty">Nada urgente por ahora. ✓</div>'}</div>
     </section>
     <section class="card pad sec"><div class="sec-h"><h2>Próximas dos semanas</h2><a class="small" href="#calendario">Ver calendario</a></div>
-      <div class="list">${semana.length ? semana.slice(0, 9).map(s => `<div class="li"><span class="swatch" style="background:${D.col[s.x.g.programaId]}"></span><div class="when">${fdw(s.d)}</div><div class="small" style="min-width:0"><a href="#d-${s.gid}"><b>${esc(s.x.nombre)}</b></a>${genB(s.x)} · M${s.m.idx + 1}, sesión ${s.k + 1}<div class="muted">${esc(s.x.g.horario || '')}${s.prof ? ' · ' + esc(shortProf(s.prof)) : ' · <b>sin profesor</b>'}</div></div></div>`).join('') + (semana.length > 9 ? `<div class="small muted" style="padding-top:6px">y ${semana.length - 9} clases más</div>` : '') : '<div class="empty">No hay clases en las próximas dos semanas.</div>'}</div>
+      <div class="agd">${semana.length ? (() => { const L = semana.slice(0, 10); let out = '', last = '';
+        for (const s of L) { if (s.d !== last) { last = s.d; const lab = s.d === TODAY ? 'Hoy' : s.d === addDays(TODAY, 1) ? 'Mañana' : fdw(s.d); out += `<div class="ag-day ${s.d === TODAY ? 'hoy' : ''}">${lab}${s.d === TODAY || s.d === addDays(TODAY, 1) ? ` <span>${fd(s.d, false)}</span>` : ''}</div>`; }
+          out += `<a class="ag-it" href="#d-${s.gid}" style="--pc:${D.col[s.x.g.programaId]}"><div class="ag-t"><b>${esc(s.x.nombre)}</b> <span class="ag-g">Gen ${s.x.gen}</span></div><div class="ag-s">Módulo ${s.m.idx + 1} · sesión ${s.k + 1}${s.x.g.horario ? ' · ' + esc(s.x.g.horario) : ''}${s.prof ? ' · ' + esc(shortProf(s.prof)) : ' · <span class="ag-sp">sin profesor</span>'}</div></a>`; }
+        return out + (semana.length > 10 ? `<div class="small muted" style="padding:8px 4px 0">y ${semana.length - 10} clases más</div>` : ''); })() : '<div class="empty">No hay clases en las próximas dos semanas.</div>'}</div>
     </section>
   </div>
   <section class="card pad sec"><div class="sec-h"><h2>Próximos 6 meses</h2><a class="small" href="#calendario">Línea de tiempo completa</a></div>
     <div class="gantt"><div></div><div class="gm g6m">${meses.map(m => `<span>${m}</span>`).join('')}</div>${gantt || '<div></div><div class="muted small">Sin generaciones con fechas en este periodo.</div>'}</div></section>
   <section class="sec">
-    <div class="sec-h"><h2>Semáforo: activos y lo que arranca en 90 días</h2><span class="small muted">Urgente = inicia en 30 días o menos y no está completo</span></div>
+    <div class="sec-h"><h2>Cómo van los diplomados</h2><span class="small muted">Activos y lo que arranca en 90 días · urgente = inicia en 30 días o menos y no está completo</span></div>
     <div class="card tbl-w"><table><thead><tr><th>Diplomado</th><th>Estatus</th><th>Inicio</th><th>Inscritos</th><th>Vendido</th><th>Preparación</th><th>Atención</th></tr></thead><tbody>
     ${[...semaf, ...(ui.semAll ? resto.sort((a, b) => (a.sc.inicio || a.g.inicioTentativo || '9999').localeCompare(b.sc.inicio || b.g.inicioTentativo || '9999')) : [])].map(x => { const ig = ingreso(x); return `<tr class="click" data-go="d-${x.id}"><td><b>${esc(x.nombre)}</b>${genB(x)}<div class="small muted">${x.missing.length && x.st !== 'En desarrollo' ? 'Falta: ' + esc(x.missing.slice(0, 3).join(' · ')) + (x.missing.length > 3 ? '…' : '') : esc(x.g.etiqueta || '')}</div></td><td>${stPill(x.st)}</td>
       <td class="num">${x.sc.inicio ? fd(x.sc.inicio, false) + (x.dpi != null ? `<div class="small muted">en ${x.dpi} días</div>` : '') : x.g.inicioTentativo ? `<span class="muted">${MESL[pd(x.g.inicioTentativo).getMonth()]} (tent.)</span>` : '<span class="muted">Sin fecha</span>'}</td>
@@ -911,6 +956,16 @@ function vTablero() {
   ${newGenForm()}`;
 }
 
+const KI = {
+  play:'<path d="M8 5.5v13l10-6.5z"/>', rocket:'<path d="M12 3c3 2 5 5.5 5 9.5L15 17H9l-2-4.5C7 8.5 9 5 12 3z"/><circle cx="12" cy="10" r="1.8"/><path d="M9 17l-2 3M15 17l2 3"/>',
+  users:'<circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18 14.3c1.6.7 2.6 2.3 3 4.7"/>',
+  money:'<rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 9.5v5M17.5 9.5v5"/>',
+  check:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 12.3l2.4 2.4 4.8-5"/>',
+  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+};
+function kpi2(ic, lab, val, sub, href, tone) {
+  return `<a class="k2 ${tone}" href="${href}"><span class="k-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${KI[ic]}</svg></span><div class="k-tx"><span class="k-l">${lab}</span><b class="k-v">${val}</b><span class="k-s">${sub}</span></div></a>`;
+}
 function newGenForm() {
   if (!ui.newGen) return '';
   const progs = Object.entries(S.programas).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre));
