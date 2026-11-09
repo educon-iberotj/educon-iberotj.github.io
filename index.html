@@ -614,7 +614,8 @@ function buildInh() {
     if (!r.desde) continue;
     let d = r.desde; const h = r.hasta && r.hasta >= r.desde ? r.hasta : r.desde;
     for (let i = 0; i < 400 && d <= h; i++) { inhSet.set(d, r.motivo || r.tipo || 'Inhábil'); d = addDays(d, 1); }
-  }
+  }  // Todos los domingos son día de descanso
+  for (let d = '2024-01-07'; d <= '2032-12-31'; d = addDays(d, 7)) if (!inhSet.has(d)) inhSet.set(d, 'Descanso');
 }
 function schedule(g) {
   const dias = (g.dias || []).map(Number);
@@ -1126,7 +1127,7 @@ function vCalendario() {
     return `<div class="d ${d.slice(0, 7) !== ui.calMes ? 'out' : ''} ${ih ? 'inh' : ''} ${d === TODAY ? 'hoy' : ''}"><span class="dn">${pd(d).getDate()}</span>${ih ? `<span class="inhl">${esc(ih)}</span>` : ''}
       ${evs.map(s => `<button class="ev ${s.conf ? 'conf' : ''}" style="background:${evCol(s)}" data-go="d-${s.gid}" title="${esc(s.x.label)} · Módulo ${s.m.idx + 1}${s.prof ? ' · ' + esc(profName(s.prof)) : ''}${s.conf ? ' · CHOQUE: el profesor tiene otra clase este día' : ''}">G${s.x.gen}·M${s.m.idx + 1} ${esc(s.x.nombre)}</button>`).join('')}</div>`; }).join('');
   const monthDays = days.filter(d => d.slice(0, 7) === ui.calMes);
-  const agenda = monthDays.filter(d => (D.byDay.get(d) || []).some(filt) || inhSet.get(d)).map(d => `<div class="li"><div class="when">${fdw(d)}</div><div class="small" style="min-width:0">${inhSet.get(d) ? `<div class="muted">${esc(inhSet.get(d))}</div>` : ''}${(D.byDay.get(d) || []).filter(filt).map(s => `<div><a href="#d-${s.gid}"><span class="swatch" style="display:inline-block;margin:0 6px 0 0;background:${evCol(s)}"></span>${esc(s.x.nombre)}</a> · M${s.m.idx + 1}${s.conf ? ' <b style="color:var(--crit)">choque</b>' : ''}</div>`).join('')}</div></div>`).join('');
+  const agenda = monthDays.filter(d => (D.byDay.get(d) || []).some(filt) || (inhSet.get(d) && inhSet.get(d) !== 'Descanso')).map(d => `<div class="li"><div class="when">${fdw(d)}</div><div class="small" style="min-width:0">${inhSet.get(d) ? `<div class="muted">${esc(inhSet.get(d))}</div>` : ''}${(D.byDay.get(d) || []).filter(filt).map(s => `<div><a href="#d-${s.gid}"><span class="swatch" style="display:inline-block;margin:0 6px 0 0;background:${evCol(s)}"></span>${esc(s.x.nombre)}</a> · M${s.m.idx + 1}${s.conf ? ' <b style="color:var(--crit)">choque</b>' : ''}</div>`).join('')}</div></div>`).join('');
   // gantt anual
   const yr = y; const y0 = `${yr}-01-01`, y1 = `${yr}-12-31`; const span = daysBetween(y0, y1) + 1;
   const rows = D.gens.filter(x => x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
@@ -1135,7 +1136,7 @@ function vCalendario() {
     return `<div class="gl"><a href="#d-${x.id}">${esc(x.nombre)}</a> <span class="muted small">Gen ${x.gen}</span></div><div class="gt">${nowPct != null ? `<span class="now" style="left:${nowPct}%"></span>` : ''}<span class="gb" style="left:${l}%;width:${w}%;background:${D.col[x.g.programaId]}" title="${esc(x.label)}: ${fd(x.sc.inicio)} → ${fd(x.sc.fin)}"></span></div>`; }).join('');
   const inhs = [...(S.inh.lista || [])].map((r, i) => ({ ...r, i })).sort((a, b) => (a.desde || '').localeCompare(b.desde || ''));
   const progsUsed = [...new Set(D.gens.filter(x => x.sc.all.length).map(x => x.g.programaId))].map(p => [p, (S.programas[p] || {}).nombre || p]).sort((a, b) => a[1].localeCompare(b[1]));
-  return `<div class="head"><div><h1>Calendario</h1><p>Todas las clases de todos los diplomados. Los días rayados son inhábiles según el calendario oficial IBERO.</p></div>
+  return `<div class="head"><div><h1>Calendario</h1><p>Todas las clases de todos los diplomados. Los días rayados son inhábiles según el calendario oficial IBERO; los domingos son de descanso.</p></div>
     <div class="tools"><select class="in flt" id="cal-prog" style="width:auto" aria-label="Filtrar por programa"><option value="">Todos los programas</option>${progsUsed.map(([k, n]) => `<option value="${k}" ${ui.calProg === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
     <button class="btn" data-act="cal" data-d="-1" aria-label="Mes anterior">←</button><b style="min-width:150px;text-align:center">${MESL[m - 1]} ${y}</b><button class="btn" data-act="cal" data-d="1" aria-label="Mes siguiente">→</button><button class="btn ghost" data-act="cal" data-d="0">Hoy</button></div></div>
   <div class="tools"><span class="small muted">Colorear por</span><div class="tabs"><button class="tab ${ui.calColor !== 'modulo' ? 'on' : ''}" data-act="cal-color" data-v="programa">Programa</button><button class="tab ${ui.calColor === 'modulo' ? 'on' : ''}" data-act="cal-color" data-v="modulo">Módulo (como en Excel)</button></div>
