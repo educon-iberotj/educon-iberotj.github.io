@@ -559,6 +559,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const pad = n => String(n).padStart(2, '0');
 const ds = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const pd = s => { if (!s) return null; const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const horarioDe = (g, d) => ((g.horarioDia || {})[pd(d).getDay()] || g.horario || '').replace(/^(Lun|Mar|Mié|Jue|Vie|Sáb|Dom)\s+/, '');
 const addDays = (s, n) => { const d = pd(s); d.setDate(d.getDate()+n); return ds(d); };
 const TODAY = ds(new Date());
 const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -927,7 +928,7 @@ function vTablero() {
     <section class="card pad sec"><div class="sec-h"><h2>Próximas dos semanas</h2><a class="small" href="#calendario">Ver calendario</a></div>
       <div class="agd">${semana.length ? (() => { const L = semana.slice(0, 10); let out = '', last = '';
         for (const s of L) { if (s.d !== last) { last = s.d; const lab = s.d === TODAY ? 'Hoy' : s.d === addDays(TODAY, 1) ? 'Mañana' : fdw(s.d); out += `<div class="ag-day ${s.d === TODAY ? 'hoy' : ''}">${lab}${s.d === TODAY || s.d === addDays(TODAY, 1) ? ` <span>${fd(s.d, false)}</span>` : ''}</div>`; }
-          out += `<a class="ag-it" href="#d-${s.gid}" style="--pc:${D.col[s.x.g.programaId]}"><div class="ag-t"><b>${esc(s.x.nombre)}</b> <span class="ag-g">Gen ${s.x.gen}</span></div><div class="ag-s">Módulo ${s.m.idx + 1} · sesión ${s.k + 1}${s.x.g.horario ? ' · ' + esc(s.x.g.horario) : ''}${s.prof ? ' · ' + esc(shortProf(s.prof)) : ' · <span class="ag-sp">sin profesor</span>'}</div></a>`; }
+          out += `<a class="ag-it" href="#d-${s.gid}" style="--pc:${D.col[s.x.g.programaId]}"><div class="ag-t"><b>${esc(s.x.nombre)}</b> <span class="ag-g">Gen ${s.x.gen}</span></div><div class="ag-s">Módulo ${s.m.idx + 1} · sesión ${s.k + 1}${horarioDe(s.x.g, s.d) ? ' · ' + esc(horarioDe(s.x.g, s.d)) : ''}${s.prof ? ' · ' + esc(shortProf(s.prof)) : ' · <span class="ag-sp">sin profesor</span>'}</div></a>`; }
         return out + (semana.length > 10 ? `<div class="small muted" style="padding:8px 4px 0">y ${semana.length - 10} clases más</div>` : ''); })() : '<div class="empty">No hay clases en las próximas dos semanas.</div>'}</div>
     </section>
   </div>
@@ -1764,7 +1765,7 @@ function vAsistencia() {
   const conc = ui.asConc;
   const todas = [...new Set([...fechas.filter(f => f <= TODAY), ...Object.keys(D.asisByGen[gid] || {})])].sort();
   return `<div class="head"><div><h1>Asistencia</h1><p>Pasa lista tocando el estado de cada alumno, o muestra el QR para que cada quien se registre desde su celular.</p></div></div>
-  ${hoy.length ? `<section class="card pad sec"><h2>Clases de hoy</h2><div class="chips">${[...new Map(hoy.map(s => [s.gid, s])).values()].map(s => `<button class="chip ${s.gid === gid && fecha === TODAY ? 'on' : ''}" data-act="as-pick" data-g="${s.gid}" data-f="${TODAY}">${esc(s.x.nombre)} · Gen ${s.x.gen} · M${s.m.idx + 1}${s.x.g.horario ? ' · ' + esc(s.x.g.horario) : ''}</button>`).join('')}</div></section>` : ''}
+  ${hoy.length ? `<section class="card pad sec"><h2>Clases de hoy</h2><div class="chips">${[...new Map(hoy.map(s => [s.gid, s])).values()].map(s => `<button class="chip ${s.gid === gid && fecha === TODAY ? 'on' : ''}" data-act="as-pick" data-g="${s.gid}" data-f="${TODAY}">${esc(s.x.nombre)} · Gen ${s.x.gen} · M${s.m.idx + 1}${horarioDe(s.x.g, s.d) ? ' · ' + esc(horarioDe(s.x.g, s.d)) : ''}</button>`).join('')}</div></section>` : ''}
   <div class="tools">${grupoSel('as-gen', gid, false, true)}
     <select class="in flt" id="as-fecha" style="width:auto" aria-label="Sesión">${(fechas.length ? fechas : [fecha]).map(f => `<option value="${f}" ${f === fecha ? 'selected' : ''}>${fdw(f)} ${f.slice(0, 4)}${f === TODAY ? ' · hoy' : f > TODAY ? ' · próxima' : ''}</option>`).join('')}</select>
     <div class="tabs"><button class="tab ${!conc ? 'on' : ''}" data-act="as-conc" data-v="">Pasar lista</button><button class="tab ${conc ? 'on' : ''}" data-act="as-conc" data-v="1">Concentrado</button></div></div>
