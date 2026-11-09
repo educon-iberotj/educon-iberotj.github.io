@@ -590,6 +590,21 @@ const PRECIOS_BASE = { esquemas:[
 const esquemas = () => ((S.precios && S.precios.esquemas) || PRECIOS_BASE.esquemas);
 function esqAuto(pid, p) { if (p && p.esquemaPrecio) return p.esquemaPrecio; if (['alta-direccion','gestion-financiera'].includes(pid)) return 'coparmex'; if (!p) return null; return p.tipo === 'Curso' ? 'cursos' : p.tipo === 'Diplomado' ? 'diplomados' : null; }
 function esqDe(g, p) { const id = g.esquemaPrecio || esqAuto(g.programaId, p); if (!id || id === 'ninguno') return null; return esquemas().find(e => e.id === id) || null; }
+// ---------- horas ----------
+function durHora(t) {
+  const m = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.)?\s*(?:[–—-]|a)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.)?/i.exec(t || ''); if (!m) return null;
+  const cv = (h, mi, ap) => { h = +h; const p = ap ? ap[0].toLowerCase() : ''; if (p === 'p' && h < 12) h += 12; if (p === 'a' && h === 12) h = 0; return h + (+mi || 0) / 60; };
+  const b = cv(m[4], m[5], m[6]); let a = cv(m[1], m[2], m[3]);
+  if (!m[3] && m[6] && m[6][0].toLowerCase() === 'p' && a < 12 && a + 12 < b) a += 12;
+  const d = b - a; return d > 0 && d <= 12 ? Math.round(d * 100) / 100 : null;
+}
+function horasCalc(g, sc) {
+  if (!sc.all.length) return null; let t = 0;
+  for (const d of sc.all) { const h = durHora(horarioDe(g, d)); if (h == null) return null; t += h; }
+  return Math.round(t * 10) / 10;
+}
+function resolveEq(e, h) { if (!e || e.porHora == null) return e; return { ...e, base:h ? Math.round(Number(e.porHora) * h) : 0, horasUsadas:h || 0 }; }
+const hTxt = h => `${Number.isInteger(h) ? h : String(h).replace(/\.0$/, '')} h`;
 const addMonths = (s, n) => { const d = pd(s); const day = d.getDate(); d.setMonth(d.getMonth() + n); if (d.getDate() < day) d.setDate(0); return ds(d); };
 const r2 = n => Math.round(n * 100) / 100;
 function priceTable(e) {
@@ -656,14 +671,15 @@ let D = null; // datos derivados
 function derive() {
   buildInh();
   const gens = Object.entries(S.gens).map(([id, g]) => {
-    const sc = schedule(g); const pp = S.programas[g.programaId]; const eq = esqDe(g, pp);
+    const sc = schedule(g); const pp = S.programas[g.programaId]; const hc = horasCalc(g, sc); const horas = Number(g.horas) || Number((pp || {}).horas) || hc || null; const horasFuente = Number(g.horas) ? 'gen' : Number((pp || {}).horas) ? 'prog' : hc ? 'calc' : ''; const eq = resolveEq(esqDe(g, pp), horas);
     if (!sc.all.length && !g.finManual && sc.inicio && eq && eq.meses) { sc.fin = addMonths(sc.inicio, Number(eq.meses)); sc.finEst = true; }
     const st = statusOf(g, sc);
     const plan = Number(g.modulosPlaneados) || (g.modulos || []).length || 0;
     const conf = (g.modulos || []).filter(m => m.estatusProfe === 'Confirmado' && m.profesorId).length;
     const altas = (g.modulos || []).filter(m => m.alta === true).length;
-    const checks = [ ['Fecha de inicio', !!sc.inicio], ['Fecha de fin', !!sc.fin], ['Días', (g.dias||[]).length > 0], ['Horario', !!g.horario], ['Sede', !!g.sede], ['Costos', !!eq || (g.costoInscripcion != null && g.costoInscripcion !== '')] ];
+    const checks = [ ['Fecha de inicio', !!sc.inicio], ['Fecha de fin', !!sc.fin], ['Días', (g.dias||[]).length > 0], ['Horario', !!g.horario], ['Sede', !!g.sede], ['Costos', (!!eq && eq.base > 0) || (g.costoInscripcion != null && g.costoInscripcion !== '')] ];
     const missing = checks.filter(c => !c[1]).map(c => c[0]);
+    if (!horas) missing.push('Horas');
     if (!plan) missing.push('Módulos');
     else { if (plan - conf > 0) missing.push(`${plan - conf} profes por confirmar`); if (plan - altas > 0) missing.push(`${plan - altas} altas en sistema`); }
     const prep = (checks.filter(c => c[1]).length + (plan ? Math.min(1, conf / plan) + Math.min(1, altas / plan) : 0)) / 8;
@@ -672,7 +688,7 @@ function derive() {
     if (!['En desarrollo','Pausado','Concluido','Activo'].includes(st)) aten = prep >= 1 ? 'En orden' : dpi != null && dpi <= 30 ? 'Urgente' : dpi != null && dpi <= 60 ? 'Atención' : 'En tiempo';
     if (st === 'Activo') aten = missing.some(x => /profes/.test(x)) ? 'Atención' : 'En orden';
     const p = S.programas[g.programaId] || { nombre:'(programa eliminado)' };
-    return { id, g, sc, st, eq, plan, conf, altas, prep, missing, dpi, aten, p, nombre: p.nombre, label: `${p.nombre} · ${g.etiqueta || ''}` };
+    return { id, g, sc, st, eq, horas, horasFuente, hc, plan, conf, altas, prep, missing, dpi, aten, p, nombre: p.nombre, label: `${p.nombre} · ${g.etiqueta || ''}` };
   });
   // número de generación por programa (automático; se puede corregir a mano)
   const byProg = {}; gens.forEach(x => (byProg[x.g.programaId] = byProg[x.g.programaId] || []).push(x));
@@ -1012,6 +1028,7 @@ function vDiplomados() {
 const GI = {
   cal:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   pin:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
   mod:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5"/></svg>',
   user:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6"/></svg>',
 };
@@ -1028,6 +1045,7 @@ function genCard(x, enPrograma) {
   const meta = [
     diasTxt(x.g) ? `<span>${GI.cal}${esc(diasTxt(x.g))}${x.g.horario ? ' · ' + esc(x.g.horario) : ''}</span>` : '',
     (x.g.sede || x.g.modalidad) ? `<span>${GI.pin}${esc(x.g.sede || x.g.modalidad)}</span>` : '',
+    x.horas ? `<span>${GI.clock}${hTxt(x.horas)}</span>` : '',
     nMod || x.plan ? `<span>${GI.mod}${nMod}${x.plan > nMod ? ` de ${x.plan}` : ''} módulo${(x.plan || nMod) === 1 ? '' : 's'}</span>` : '',
   ].filter(Boolean).join('');
   return `<a class="gcard" href="#d-${x.id}" style="--pc:${col}">
@@ -1066,6 +1084,7 @@ function vGen(id) {
       ${fld(`Fecha de fin ${(g.modulos||[]).some(m => m.clases || (m.fijas||[]).length) ? '<span class="muted">(se calcula con los módulos)</span>' : x.sc.finEst ? `<span class="muted">(estimada: ${fd(x.sc.fin)}, ${x.eq.meses} meses)</span>` : ''}`, (g.modulos||[]).some(m => m.clases || (m.fijas||[]).length) ? `<input class="in" value="${fd(x.sc.fin)}" disabled>` : `<input class="in" type="date" value="${esc(g.finManual || '')}" ${b('finManual', 'opt')}>`)}
       <div class="f"><span class="lbl">Días de clase</span><div class="chips">${[1,2,3,4,5,6,0].map(d => `<button class="chip w ${(g.dias||[]).map(Number).includes(d) ? 'on' : ''}" data-act="dia" data-id="${id}" data-d="${d}">${DIA[d]}</button>`).join('')}</div></div>
       ${fld('Horario', `<input class="in" value="${esc(g.horario || '')}" placeholder="18:00–22:00" ${b('horario')}>`)}
+      ${fld(`Horas totales <span class="muted">${x.horasFuente === 'calc' ? `(calculadas: ${hTxt(x.hc)})` : x.horasFuente === 'prog' ? '(las del programa)' : x.hc ? `(según calendario: ${hTxt(x.hc)})` : ''}</span>`, `<input class="in num" type="number" min="0" step="0.5" value="${g.horas ?? ''}" placeholder="${x.horas ? x.horas : 'Ej. 80'}" ${b('horas', 'num')}>`)}
       ${fld('Campus / sede', sel(SEDES.concat(g.sede && !SEDES.includes(g.sede) ? [g.sede] : []), g.sede, b('sede')))}
       ${fld('Modalidad', sel(MODAL, g.modalidad, b('modalidad')))}
       ${fld('Esquema de precios', sel([['', 'Automático · ' + ((esquemas().find(e => e.id === esqAuto(g.programaId, x.p)) || {}).nombre || 'sin esquema')], ...esquemas().map(e => [e.id, e.nombre]), ['ninguno', 'Otro (precio manual)']], g.esquemaPrecio || '', b('esquemaPrecio', 'opt'), false))}
@@ -1196,14 +1215,15 @@ function vProgramas() {
     const cur = gs.find(x => x.st === 'Activo'); const nx = gs.filter(x => ['En lanzamiento','En planeación','En desarrollo'].includes(x.st)).sort((a, b) => (a.sc.inicio || '9').localeCompare(b.sc.inicio || '9'))[0];
     return { id, p, gs, orgs, cur, nx }; }).sort((a, b) => a.p.nombre.localeCompare(b.p.nombre));
   const ofc = { 'Abierta':'s-activo','Cerrada (a la medida)':'s-lanz','En diseño':'s-des','Pausado':'s-pausa' };
-  const prSec = `<section class="sec"><div class="sec-h"><h2>Precios y duración</h2><div class="tools"><span class="small muted">Costos con 0% de beca. Si cambias un precio, se actualiza en todas las generaciones.</span><button class="btn sm w" data-act="esq-add">+ Esquema</button></div></div>
+  const prSec = `<section class="sec"><div class="sec-h"><h2>Precios y duración</h2><div class="tools"><span class="small muted">Costos con 0% de beca. Si cambias un precio, se actualiza en todas las generaciones.</span><button class="btn sm w" data-act="esq-add">+ Esquema</button><button class="btn sm w" data-act="esq-add-h">+ Esquema por hora</button></div></div>
     <div class="pcs" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">${esquemas().map((e, i) => { const pr = (f, t) => `data-pr="${i}|${f}" data-t="${t || 'text'}"`; const usa = Object.entries(S.programas).filter(([pid, p]) => esqAuto(pid, p) === e.id).map(([, p]) => p.nombre);
       return `<div class="card pad sec"><input class="in" style="font-weight:700" value="${esc(e.nombre)}" ${pr('nombre')} aria-label="Nombre del esquema">
-      <div class="form" style="grid-template-columns:1fr 1fr"><div class="f"><label>Precio de lista (0%)</label><input class="in num" type="number" min="0" value="${e.base}" ${pr('base', 'num')}></div><div class="f"><label>Duración (meses)</label><input class="in num" type="number" min="0" value="${e.meses ?? ''}" ${pr('meses', 'num')}></div><div class="f"><label>Parcialidades a 0%</label><input class="in num" type="number" min="1" max="24" value="${e.pagosLista || 1}" ${pr('pagosLista', 'num')}></div></div>
+      <div class="form" style="grid-template-columns:1fr 1fr">${e.porHora != null ? `<div class="f"><label>Precio por hora (0%)</label><input class="in num" type="number" min="0" value="${e.porHora}" ${pr('porHora', 'num')}></div><div class="f"><label>Horas del ejemplo</label><input class="in num" type="number" min="1" value="${e.horasEjemplo || 100}" ${pr('horasEjemplo', 'num')}></div>` : `<div class="f"><label>Precio de lista (0%)</label><input class="in num" type="number" min="0" value="${e.base}" ${pr('base', 'num')}></div>`}<div class="f"><label>Duración (meses)</label><input class="in num" type="number" min="0" value="${e.meses ?? ''}" ${pr('meses', 'num')}></div><div class="f"><label>Parcialidades a 0%</label><input class="in num" type="number" min="1" max="24" value="${e.pagosLista || 1}" ${pr('pagosLista', 'num')}></div></div>
       <div class="lbl">Opciones de pago</div>
       ${(e.opciones || []).map((o, j) => `<div class="optrow"><input class="in" value="${esc(o.nombre)}" data-pr="${i}|o|${j}|nombre" data-t="text" aria-label="Opción"><button class="btn ghost sm danger w" data-act="esq-opt-del" data-i="${i}" data-j="${j}" aria-label="Quitar opción">✕</button><div class="mini"><input class="in num" type="number" min="0" max="100" value="${o.desc}" data-pr="${i}|o|${j}|desc" data-t="num" aria-label="% de beca"><span>%</span></div><div class="mini"><input class="in num" type="number" min="1" max="24" value="${o.pagos}" data-pr="${i}|o|${j}|pagos" data-t="num" aria-label="Número de pagos"><span>pagos</span></div></div>`).join('')}
       <div><button class="btn ghost sm w" data-act="esq-opt-add" data-i="${i}">+ Opción</button></div>
-      ${priceTable(e)}
+      ${e.porHora != null ? `<div class="note small">El precio de cada programa = <b>${money(e.porHora)} × sus horas</b>. Ejemplo con ${e.horasEjemplo || 100} horas: precio de lista <b>${money(resolveEq(e, e.horasEjemplo || 100).base)}</b>.</div>` : ''}
+      ${priceTable(e.porHora != null ? resolveEq(e, e.horasEjemplo || 100) : e)}
       <div class="small muted">${usa.length ? 'Se aplica a: ' + esc(usa.join(', ')) : 'Ningún programa lo usa automáticamente; asígnalo desde la ficha del programa.'}</div>
       ${['coparmex','diplomados','cursos'].includes(e.id) ? '' : `<div><button class="btn ghost sm danger w" data-act="esq-del" data-i="${i}">Eliminar esquema</button></div>`}</div>`; }).join('')}</div></section>`;
   return `<div class="head"><div><h1>Catálogo de programas</h1><p>Los programas que ofrece EduCon. Cada uno puede tener varias generaciones.</p></div><div class="tools"><button class="btn pri w" data-act="new-prog">+ Programa</button></div></div>
@@ -1212,7 +1232,8 @@ function vProgramas() {
   <div class="pcs">${L.filter(r => areaOf(r.p) === ar).map(r => `<a class="card pc" href="#pr-${r.id}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><h2 style="font-size:17px">${esc(r.p.nombre)}</h2><span class="swatch" style="background:${D.col[r.id]};width:12px;height:12px"></span></div>
     <div class="meta"><span>${esc(r.p.tipo || '')}</span><span>${esc(r.p.area || '')}</span>${pill(r.p.oferta || '—', ofc[r.p.oferta] || 's-fin')}</div>
     <div class="small">${r.cur ? `<b>En curso:</b> ${esc(r.cur.g.etiqueta)}` : r.nx ? `<b>Siguiente:</b> ${esc(r.nx.g.etiqueta)}${r.nx.sc.inicio ? ' · ' + fd(r.nx.sc.inicio) : ''}` : '<span class="muted">Sin generación próxima</span>'}</div>
-    ${(() => { const e = esquemas().find(e => e.id === esqAuto(r.id, r.p)); return e ? `<div class="small">${money(e.base)} · ${e.meses} meses</div>` : ''; })()}
+    ${(() => { const e = esquemas().find(e => e.id === esqAuto(r.id, r.p)); const h = Number(r.p.horas); const ee = resolveEq(e, h);
+      return `<div class="small">${h ? `<b>${hTxt(h)}</b>` : '<span class="muted">Sin horas capturadas</span>'}${e ? ` · ${e.porHora != null ? (h ? money(ee.base) + ` <span class="muted">(${money(e.porHora)}/h)</span>` : money(e.porHora) + ' por hora') : money(e.base) + ' · ' + e.meses + ' meses'}` : ''}</div>`; })()}
     <div class="meta"><span>${r.gs.length} generaciones</span><span>${r.orgs} organizaciones afines</span></div></a>`).join('')}</div></section>`).join('')}`;
 }
 function vPrograma(id) {
@@ -1227,6 +1248,7 @@ function vPrograma(id) {
     ${fld('Tipo', sel(TIPOS, p.tipo, b('tipo')))}
     ${fld('Área', sel(AREAS.concat(p.area && !AREAS.includes(p.area) ? [p.area] : []), p.area, b('area')))}
     ${fld('Oferta', sel(OFERTA, p.oferta, b('oferta')))}
+    ${fld('Horas totales', `<input class="in num" type="number" min="0" step="0.5" value="${p.horas ?? ''}" placeholder="Ej. 80" ${b('horas', 'num')}>`)}
     ${fld('Esquema de precios', sel([['', 'Automático según el tipo'], ...esquemas().map(e => [e.id, e.nombre]), ['ninguno', 'Ninguno (precio manual)']], p.esquemaPrecio || '', b('esquemaPrecio', 'opt'), false))}
     ${fld('Notas', `<textarea class="in" ${b('notas')}>${esc(p.notas || '')}</textarea>`, true)}
   </div></section>
@@ -1447,7 +1469,7 @@ function faltantes() {
   out.orgs.sort((a, b) => PRIOR.indexOf(a.o.prioridad) - PRIOR.indexOf(b.o.prioridad));
   for (const [id, p] of Object.entries(S.programas)) {
     if (p.oferta === 'Pausado') continue;
-    const f = []; if (!p.area) f.push('área'); if (!esqAuto(id, p) || esqAuto(id, p) === 'ninguno') f.push('esquema de precios');
+    const f = []; if (!p.area) f.push('área'); if (!Number(p.horas)) f.push('horas totales'); if (!esqAuto(id, p) || esqAuto(id, p) === 'ninguno') f.push('esquema de precios');
     if (f.length) out.progs.push({ id, p, f });
   }
   return out;
@@ -1916,6 +1938,7 @@ document.addEventListener('click', async e => {
   else if (act === 't-unasig-x') { taskPatch(id, t => { t.asignadosTexto = (t.asignadosTexto || []).filter(x => x !== a.dataset.u); }); }
   else if (act === 'ck-del') { taskPatch(id, t => { (t.checklist || []).splice(Number(a.dataset.i), 1); }); }
   else if (act === 'esq-add') { const P = clone({ esquemas:esquemas() }); P.esquemas.push({ id:uid('esq'), nombre:'Nuevo esquema', tipo:'Diplomado', base:0, meses:5, opciones:[{ nombre:'Pago de contado', desc:25, pagos:1 }] }); savePrecios(P); }
+  else if (act === 'esq-add-h') { const P = clone({ esquemas:esquemas() }); P.esquemas.push({ id:uid('esq'), nombre:'A la medida', tipo:'Diplomado', porHora:295, horasEjemplo:100, base:0, meses:5, pagosLista:5, opciones:[{ nombre:'Pago de contado', desc:25, pagos:1 }, { nombre:'Egresado IBERO', desc:30, pagos:5 }, { nombre:'Promoción especial', desc:20, pagos:5 }] }); savePrecios(P); }
   else if (act === 'esq-del') { if (!arm(a)) return; const P = clone({ esquemas:esquemas() }); P.esquemas.splice(Number(a.dataset.i), 1); savePrecios(P); }
   else if (act === 'esq-opt-add') { const P = clone({ esquemas:esquemas() }); P.esquemas[Number(a.dataset.i)].opciones.push({ nombre:'Nueva opción', desc:0, pagos:1 }); savePrecios(P); }
   else if (act === 'esq-opt-del') { const P = clone({ esquemas:esquemas() }); P.esquemas[Number(a.dataset.i)].opciones.splice(Number(a.dataset.j), 1); savePrecios(P); }
@@ -1978,7 +2001,7 @@ $('#exp').addEventListener('click', async () => {
   const wb = XLSX.utils.book_new();
   const add = (name, rows) => { const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = Object.keys(rows[0] || {}).map(k => ({ wch: Math.min(48, Math.max(10, k.length + 2, ...rows.slice(0, 80).map(r => String(r[k] ?? '').length))) })); XLSX.utils.book_append_sheet(wb, ws, name); };
   const gs = [...D.gens].sort((a, b) => (b.sc.inicio || '0').localeCompare(a.sc.inicio || '0'));
-  add('Diplomados', gs.map(x => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nombre corto':x.g.etiqueta, 'Tipo':x.p.tipo, 'Área':x.p.area, 'Estatus':x.st, 'Inicio':x.sc.inicio || '', 'Inicio tentativo':x.g.inicioTentativo || '', 'Fin':x.sc.fin || '', 'Días':diasTxt(x.g), 'Horario':x.g.horario, 'Sede':x.g.sede, 'Modalidad':x.g.modalidad, 'Módulos':(x.g.modulos || []).length, 'Profes confirmados':x.conf, 'Altas':x.altas, 'Fin estimado':x.sc.finEst ? 'Sí' : '', 'Esquema de precios':x.eq ? x.eq.nombre : 'Manual', 'Precio de lista':x.eq ? x.eq.base : (x.g.costoInscripcion ?? ''), 'Opciones de pago':x.eq ? x.eq.opciones.map(o => { const t = r2(x.eq.base * (1 - o.desc / 100)); return `${o.nombre} ${o.desc}%: ${money(t)}${o.pagos > 1 ? ` (${o.pagos} × ${money(r2(t / o.pagos))})` : ''}`; }).join(' | ') : '', 'Plan de pago':x.g.planPago, 'Promoción':x.g.promocion, 'Meta de inscritos':x.g.meta ?? '', 'Inscritos':x.g.inscritos ?? '', 'Vendido':ingreso(x).total || '', 'Cobrado':ingreso(x).total ? ingreso(x).cobrado : '', 'Por cobrar':ingreso(x).total ? ingreso(x).porCobrar : '', 'Responsable':x.g.responsable, 'Preparación %':Math.round(x.prep * 100), 'Atención':x.aten, 'Pendientes':x.missing.join(' · '), 'Notas':x.g.notas })));
+  add('Diplomados', gs.map(x => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nombre corto':x.g.etiqueta, 'Tipo':x.p.tipo, 'Área':x.p.area, 'Horas':x.horas || '', 'Estatus':x.st, 'Inicio':x.sc.inicio || '', 'Inicio tentativo':x.g.inicioTentativo || '', 'Fin':x.sc.fin || '', 'Días':diasTxt(x.g), 'Horario':x.g.horario, 'Sede':x.g.sede, 'Modalidad':x.g.modalidad, 'Módulos':(x.g.modulos || []).length, 'Profes confirmados':x.conf, 'Altas':x.altas, 'Fin estimado':x.sc.finEst ? 'Sí' : '', 'Esquema de precios':x.eq ? x.eq.nombre : 'Manual', 'Precio de lista':x.eq ? x.eq.base : (x.g.costoInscripcion ?? ''), 'Opciones de pago':x.eq ? x.eq.opciones.map(o => { const t = r2(x.eq.base * (1 - o.desc / 100)); return `${o.nombre} ${o.desc}%: ${money(t)}${o.pagos > 1 ? ` (${o.pagos} × ${money(r2(t / o.pagos))})` : ''}`; }).join(' | ') : '', 'Plan de pago':x.g.planPago, 'Promoción':x.g.promocion, 'Meta de inscritos':x.g.meta ?? '', 'Inscritos':x.g.inscritos ?? '', 'Vendido':ingreso(x).total || '', 'Cobrado':ingreso(x).total ? ingreso(x).cobrado : '', 'Por cobrar':ingreso(x).total ? ingreso(x).porCobrar : '', 'Responsable':x.g.responsable, 'Preparación %':Math.round(x.prep * 100), 'Atención':x.aten, 'Pendientes':x.missing.join(' · '), 'Notas':x.g.notas })));
   add('Módulos', gs.flatMap(x => x.sc.mods.map(m => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nº':m.idx + 1, 'Módulo':m.nombre, 'Profesor(a)':profName(m.profesorId), 'Estatus profesor':m.estatusProfe, 'Alta en sistema':m.alta === true ? 'Sí' : m.alta === false ? 'No' : '', 'Clases':m.ses.length || m.clases || '', 'Inicio módulo':m.ses[0] || '', 'Fin módulo':m.ses[m.ses.length - 1] || '', 'Fechas':m.auto ? 'Automáticas' : 'Fijas' }))));
   add('Sesiones', D.ses.map(s => ({ 'Fecha':s.d, 'Día':DIAL[pd(s.d).getDay()], 'Programa':s.x.nombre, 'Generación':s.x.gen, 'Módulo':`${s.m.idx + 1}. ${s.m.nombre || ''}`, 'Sesión':s.k + 1, 'Horario':horarioDe(s.x.g, s.d), 'Sede':s.x.g.sede, 'Profesor(a)':profName(s.prof), 'Choque':s.conf ? 'Sí' : '' })));
   add('Profesores', Object.entries(S.profes).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre)).map(([id, p]) => ({ 'Nombre':p.nombre, 'Teléfono':p.telefono, 'Correo':p.correo, 'Licenciatura':p.licenciatura, 'Maestría':p.maestria, 'Doctorado':p.doctorado, 'Áreas':p.areas, 'Experiencia':p.experiencia, 'Módulos asignados':profStats(id).ms.length, 'Notas':p.notas })));
