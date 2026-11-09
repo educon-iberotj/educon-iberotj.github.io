@@ -434,6 +434,14 @@ details summary{cursor:pointer}
 .ag-sp{color:var(--crit);font-weight:600}
 .gantt .gb{border-radius:999px}
 @media (max-width:620px){.kp2{grid-template-columns:1fr 1fr}.k2{padding:12px}.k-ic{display:none}.dash-hero{padding:18px}}
+.pc-sig{font-size:13.5px;color:var(--fg2);display:flex;align-items:center;gap:7px}
+.pc-dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.pc-dot.ok{background:var(--ok)} .pc-dot.info{background:var(--info)}
+.g-meta em{font-style:normal;color:var(--fg3);margin-left:3px}
+.g-meta .pc-falta{color:var(--warn);background:var(--warn-bg);border-color:transparent}
+.g-foot b{font:700 20px/1 var(--f-disp)}
+.esqs{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
+.esqs>.card{border-radius:14px;border-top:4px solid var(--rojo)}
 .mat{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;color:var(--fg2);letter-spacing:.02em}
 .asbtns{display:flex;gap:6px;flex:none}
 .asb{min-width:98px;padding:0 12px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:700;cursor:pointer;color:var(--fg2)}
@@ -1028,6 +1036,7 @@ function vDiplomados() {
 const GI = {
   cal:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   pin:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>',
+  tag:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1 1 0 0 1 0 1.4l-7.3 7.3a1 1 0 0 1-1.4 0z"/><circle cx="8" cy="8" r="1.4"/></svg>',
   clock:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
   mod:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5"/></svg>',
   user:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6"/></svg>',
@@ -1211,12 +1220,24 @@ function vProfe(id) {
 }
 
 function vProgramas() {
-  const L = Object.entries(S.programas).map(([id, p]) => { const gs = D.gens.filter(x => x.g.programaId === id); const orgs = Object.values(S.orgs).filter(o => (o.programas || []).includes(id) || o.todos).length;
-    const cur = gs.find(x => x.st === 'Activo'); const nx = gs.filter(x => ['En lanzamiento','En planeación','En desarrollo'].includes(x.st)).sort((a, b) => (a.sc.inicio || '9').localeCompare(b.sc.inicio || '9'))[0];
+  const L0 = Object.entries(S.programas).map(([id, p]) => { const gs = D.gens.filter(x => x.g.programaId === id); const orgs = Object.values(S.orgs).filter(o => (o.programas || []).includes(id) || o.todos).length;
+    const cur = gs.find(x => x.st === 'Activo'); const nx = gs.filter(x => ['En lanzamiento','En planeación','En desarrollo'].includes(x.st)).sort((a, b) => (a.sc.inicio || a.g.inicioTentativo || '9').localeCompare(b.sc.inicio || b.g.inicioTentativo || '9'))[0];
     return { id, p, gs, orgs, cur, nx }; }).sort((a, b) => a.p.nombre.localeCompare(b.p.nombre));
   const ofc = { 'Abierta':'s-activo','Cerrada (a la medida)':'s-lanz','En diseño':'s-des','Pausado':'s-pausa' };
-  const prSec = `<section class="sec"><div class="sec-h"><h2>Precios y duración</h2><div class="tools"><span class="small muted">Costos con 0% de beca. Si cambias un precio, se actualiza en todas las generaciones.</span><button class="btn sm w" data-act="esq-add">+ Esquema</button><button class="btn sm w" data-act="esq-add-h">+ Esquema por hora</button></div></div>
-    <div class="pcs" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">${esquemas().map((e, i) => { const pr = (f, t) => `data-pr="${i}|${f}" data-t="${t || 'text'}"`; const usa = Object.entries(S.programas).filter(([pid, p]) => esqAuto(pid, p) === e.id).map(([, p]) => p.nombre);
+  const tab = ui.catTab === 'precios' ? 'precios' : 'programas';
+  const q = norm(ui.catQ || '');
+  const L1 = L0.filter(r => !q || norm(r.p.nombre + ' ' + (r.p.area || '') + ' ' + (r.p.tipo || '')).includes(q));
+  const areas = [...new Set(L1.map(r => areaOf(r.p)))].sort(areaSort);
+  if (ui.catArea && !areas.includes(ui.catArea)) ui.catArea = '';
+  const L = L1.filter(r => !ui.catArea || areaOf(r.p) === ui.catArea);
+  const nAct = L0.filter(r => r.cur).length, nDis = L0.filter(r => r.p.oferta === 'En diseño').length;
+  const head = `<div class="dash-hero"><div><div class="dh-hi">Catálogo</div><h1>Programas de Educación Continua</h1>
+    <p><b>${L0.length}</b> programas · <b>${nAct}</b> con generación en curso · <b>${nDis}</b> en diseño · <b>${esquemas().length}</b> esquemas de precio</p></div>
+    <div class="tools"><button class="btn pri w" data-act="new-prog">+ Programa</button></div></div>
+  <div class="tools" style="justify-content:space-between"><div class="tabs"><button class="tab ${tab === 'programas' ? 'on' : ''}" data-act="cat-tab" data-v="programas">Programas <span class="muted">${L0.length}</span></button><button class="tab ${tab === 'precios' ? 'on' : ''}" data-act="cat-tab" data-v="precios">Precios y duración <span class="muted">${esquemas().length}</span></button></div>
+    ${tab === 'programas' ? `<input class="in" type="search" id="cat-q" placeholder="Buscar programa" value="${esc(ui.catQ || '')}" style="max-width:280px" aria-label="Buscar programa">` : `<div class="tools"><button class="btn sm w" data-act="esq-add">+ Esquema</button><button class="btn sm w" data-act="esq-add-h">+ Esquema por hora</button></div>`}</div>`;
+  if (tab === 'precios') return head + `<div class="note small">Costos con 0% de beca. Si cambias un precio, se actualiza solo en todas las generaciones que usan ese esquema.</div>
+    <div class="esqs">${esquemas().map((e, i) => { const pr = (f, t) => `data-pr="${i}|${f}" data-t="${t || 'text'}"`; const usa = Object.entries(S.programas).filter(([pid, p]) => esqAuto(pid, p) === e.id).map(([, p]) => p.nombre);
       return `<div class="card pad sec"><input class="in" style="font-weight:700" value="${esc(e.nombre)}" ${pr('nombre')} aria-label="Nombre del esquema">
       <div class="form" style="grid-template-columns:1fr 1fr">${e.porHora != null ? `<div class="f"><label>Precio por hora (0%)</label><input class="in num" type="number" min="0" value="${e.porHora}" ${pr('porHora', 'num')}></div><div class="f"><label>Horas del ejemplo</label><input class="in num" type="number" min="1" value="${e.horasEjemplo || 100}" ${pr('horasEjemplo', 'num')}></div>` : `<div class="f"><label>Precio de lista (0%)</label><input class="in num" type="number" min="0" value="${e.base}" ${pr('base', 'num')}></div>`}<div class="f"><label>Duración (meses)</label><input class="in num" type="number" min="0" value="${e.meses ?? ''}" ${pr('meses', 'num')}></div><div class="f"><label>Parcialidades a 0%</label><input class="in num" type="number" min="1" max="24" value="${e.pagosLista || 1}" ${pr('pagosLista', 'num')}></div></div>
       <div class="lbl">Opciones de pago</div>
@@ -1225,16 +1246,21 @@ function vProgramas() {
       ${e.porHora != null ? `<div class="note small">El precio de cada programa = <b>${money(e.porHora)} × sus horas</b>. Ejemplo con ${e.horasEjemplo || 100} horas: precio de lista <b>${money(resolveEq(e, e.horasEjemplo || 100).base)}</b>.</div>` : ''}
       ${priceTable(e.porHora != null ? resolveEq(e, e.horasEjemplo || 100) : e)}
       <div class="small muted">${usa.length ? 'Se aplica a: ' + esc(usa.join(', ')) : 'Ningún programa lo usa automáticamente; asígnalo desde la ficha del programa.'}</div>
-      ${['coparmex','diplomados','cursos'].includes(e.id) ? '' : `<div><button class="btn ghost sm danger w" data-act="esq-del" data-i="${i}">Eliminar esquema</button></div>`}</div>`; }).join('')}</div></section>`;
-  return `<div class="head"><div><h1>Catálogo de programas</h1><p>Los programas que ofrece EduCon. Cada uno puede tener varias generaciones.</p></div><div class="tools"><button class="btn pri w" data-act="new-prog">+ Programa</button></div></div>
-  ${prSec}
-  ${[...new Set(L.map(r => areaOf(r.p)))].sort(areaSort).map(ar => `<section class="sec"><div class="sec-h"><h2>${esc(ar)}</h2><span class="small muted">${L.filter(r => areaOf(r.p) === ar).length} programas</span></div>
-  <div class="pcs">${L.filter(r => areaOf(r.p) === ar).map(r => `<a class="card pc" href="#pr-${r.id}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><h2 style="font-size:17px">${esc(r.p.nombre)}</h2><span class="swatch" style="background:${D.col[r.id]};width:12px;height:12px"></span></div>
-    <div class="meta"><span>${esc(r.p.tipo || '')}</span><span>${esc(r.p.area || '')}</span>${pill(r.p.oferta || '—', ofc[r.p.oferta] || 's-fin')}</div>
-    <div class="small">${r.cur ? `<b>En curso:</b> ${esc(r.cur.g.etiqueta)}` : r.nx ? `<b>Siguiente:</b> ${esc(r.nx.g.etiqueta)}${r.nx.sc.inicio ? ' · ' + fd(r.nx.sc.inicio) : ''}` : '<span class="muted">Sin generación próxima</span>'}</div>
-    ${(() => { const e = esquemas().find(e => e.id === esqAuto(r.id, r.p)); const h = Number(r.p.horas); const ee = resolveEq(e, h);
-      return `<div class="small">${h ? `<b>${hTxt(h)}</b>` : '<span class="muted">Sin horas capturadas</span>'}${e ? ` · ${e.porHora != null ? (h ? money(ee.base) + ` <span class="muted">(${money(e.porHora)}/h)</span>` : money(e.porHora) + ' por hora') : money(e.base) + ' · ' + e.meses + ' meses'}` : ''}</div>`; })()}
-    <div class="meta"><span>${r.gs.length} generaciones</span><span>${r.orgs} organizaciones afines</span></div></a>`).join('')}</div></section>`).join('')}`;
+      ${['coparmex','diplomados','cursos'].includes(e.id) ? '' : `<div><button class="btn ghost sm danger w" data-act="esq-del" data-i="${i}">Eliminar esquema</button></div>`}</div>`; }).join('')}</div>`;
+  const card = r => { const e = esquemas().find(e => e.id === esqAuto(r.id, r.p)); const h = Number(r.p.horas) || (r.cur || r.nx || [...r.gs].sort((a, b) => (b.sc.inicio || '').localeCompare(a.sc.inicio || ''))[0] || {}).horas || 0; const ee = resolveEq(e, h);
+    const precio = e ? (e.porHora != null ? (h ? money(ee.base) : money(e.porHora) + '/h') : money(e.base)) : '';
+    const sig = r.cur ? `<span class="pc-dot ok"></span>En curso: <b>Gen ${r.cur.gen}</b>${r.cur.sc.fin ? ` · termina ${fd(r.cur.sc.fin, false)}` : ''}`
+      : r.nx ? `<span class="pc-dot info"></span>Siguiente: <b>Gen ${r.nx.gen}</b>${r.nx.sc.inicio ? ' · ' + fd(r.nx.sc.inicio) : r.nx.g.inicioTentativo ? ` · ${MESL[pd(r.nx.g.inicioTentativo).getMonth()]} ${r.nx.g.inicioTentativo.slice(0, 4)} (tent.)` : ' · sin fecha'}`
+      : '<span class="pc-dot"></span><span class="muted">Sin generación próxima</span>';
+    return `<a class="gcard pcard" href="#pr-${r.id}" style="--pc:${D.col[r.id] || 'var(--gris)'}">
+      <div class="g-top"><span class="g-gen">${esc(r.p.tipo || 'Programa')}</span>${pill(r.p.oferta || '—', ofc[r.p.oferta] || 's-fin')}</div>
+      <div class="g-name">${esc(r.p.nombre)}</div>
+      <div class="pc-sig">${sig}</div>
+      <div class="g-meta">${h ? `<span>${GI.clock}${hTxt(h)}</span>` : '<span class="pc-falta">Sin horas</span>'}${precio ? `<span>${GI.tag}${precio}${e ? ` <em>${esc(e.nombre.replace(/^Ibero Tijuana x /, ''))}</em>` : ''}</span>` : '<span class="pc-falta">Sin precio</span>'}</div>
+      <div class="g-foot"><div><label>Generaciones</label><b>${r.gs.length}</b></div><div><label>Organizaciones afines</label><b>${r.orgs}</b></div></div></a>`; };
+  return head + `<div class="tools"><span class="small muted">Área</span><div class="chips"><button class="chip ${!ui.catArea ? 'on' : ''}" data-act="cat-area" data-v="">Todas <span class="muted">${L1.length}</span></button>${areas.map(a => `<button class="chip ${ui.catArea === a ? 'on' : ''}" data-act="cat-area" data-v="${esc(a)}">${esc(a)} <span class="muted">${L1.filter(r => areaOf(r.p) === a).length}</span></button>`).join('')}</div></div>
+  ${L.length ? `<div class="gwrap">${[...new Set(L.map(r => areaOf(r.p)))].sort(areaSort).map(ar => { const G = L.filter(r => areaOf(r.p) === ar);
+    return `<div class="g-area"><h2>${esc(ar)}</h2><span>${G.length} programa${G.length === 1 ? '' : 's'}</span></div><div class="gcards">${G.map(card).join('')}</div>`; }).join('')}</div>` : '<div class="empty card">No hay programas con esa búsqueda.</div>'}`;
 }
 function vPrograma(id) {
   const p = S.programas[id]; if (!p) return `<div class="empty">Este programa ya no existe. <a href="#programas">Volver</a></div>`;
@@ -1891,7 +1917,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('input', e => {
   const el = e.target; if (el.id === 'as-q') { asSearch(el.value); return; }
-  const k = { 'q-gen':'q', 'q-prof':'profQ', 'q-org':'orgQ', 'q-t':'tQ', 'q-al':'alQ', 'q-cb':'cbQ' }[el.id];
+  const k = { 'q-gen':'q', 'q-prof':'profQ', 'q-org':'orgQ', 'q-t':'tQ', 'q-al':'alQ', 'q-cb':'cbQ', 'cat-q':'catQ' }[el.id];
   if (k) { ui[k] = el.value; clearTimeout(ui.t); ui.t = setTimeout(() => { const pos = el.selectionStart; render(); const n = document.getElementById(el.id); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 180); }
 });
 document.addEventListener('focusout', () => { setTimeout(() => { if (dirty && !($('#view').contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) render(); }, 50); });
@@ -1939,6 +1965,8 @@ document.addEventListener('click', async e => {
   else if (act === 'ck-del') { taskPatch(id, t => { (t.checklist || []).splice(Number(a.dataset.i), 1); }); }
   else if (act === 'esq-add') { const P = clone({ esquemas:esquemas() }); P.esquemas.push({ id:uid('esq'), nombre:'Nuevo esquema', tipo:'Diplomado', base:0, meses:5, opciones:[{ nombre:'Pago de contado', desc:25, pagos:1 }] }); savePrecios(P); }
   else if (act === 'esq-add-h') { const P = clone({ esquemas:esquemas() }); P.esquemas.push({ id:uid('esq'), nombre:'A la medida', tipo:'Diplomado', porHora:295, horasEjemplo:100, base:0, meses:5, pagosLista:5, opciones:[{ nombre:'Pago de contado', desc:25, pagos:1 }, { nombre:'Egresado IBERO', desc:30, pagos:5 }, { nombre:'Promoción especial', desc:20, pagos:5 }] }); savePrecios(P); }
+  else if (act === 'cat-tab') { ui.catTab = a.dataset.v; render(); }
+  else if (act === 'cat-area') { ui.catArea = a.dataset.v; render(); }
   else if (act === 'esq-del') { if (!arm(a)) return; const P = clone({ esquemas:esquemas() }); P.esquemas.splice(Number(a.dataset.i), 1); savePrecios(P); }
   else if (act === 'esq-opt-add') { const P = clone({ esquemas:esquemas() }); P.esquemas[Number(a.dataset.i)].opciones.push({ nombre:'Nueva opción', desc:0, pagos:1 }); savePrecios(P); }
   else if (act === 'esq-opt-del') { const P = clone({ esquemas:esquemas() }); P.esquemas[Number(a.dataset.i)].opciones.splice(Number(a.dataset.j), 1); savePrecios(P); }
