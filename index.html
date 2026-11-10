@@ -442,6 +442,32 @@ details summary{cursor:pointer}
 .g-foot b{font:700 20px/1 var(--f-disp)}
 .esqs{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
 .esqs>.card{border-radius:14px;border-top:4px solid var(--rojo)}
+.vtog .tab{display:inline-flex;align-items:center;gap:5px}
+.vtog svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.glist{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px}
+.grow{display:grid;grid-template-columns:minmax(0,2.4fr) 118px minmax(0,1.3fr) minmax(0,1.2fr) 70px 110px;gap:14px;align-items:center;padding:9px 16px;border-top:1px solid var(--line2);color:var(--fg);text-decoration:none;font-size:13.5px;transition:background .12s}
+.grow:first-child{border-top:0}
+.grow:hover{background:color-mix(in srgb,var(--pc) 8%,var(--panel))}
+.gr-n{display:flex;align-items:center;gap:10px;min-width:0}
+.gr-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gr-g{font-size:12px;font-weight:700;color:var(--fg2);background:color-mix(in srgb,var(--pc) 20%,var(--panel));padding:1px 7px;border-radius:999px;margin-left:4px}
+.gr-f{color:var(--fg2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.gr-a,.gm-b{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--fg2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.gr-a .g-tl,.gm-b .g-tl{flex:1;min-width:40px}
+.gr-cd{color:var(--rojo);font-weight:700}
+.grow.gr-h{padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);background:var(--bg)}
+.grow.gr-h:hover{background:var(--bg)}
+.gr-i{text-align:right;font-variant-numeric:tabular-nums}
+.gr-p{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg2);justify-content:flex-end}
+.gr-pb{width:44px;height:5px;border-radius:999px;background:var(--line2);overflow:hidden}
+.gr-pb i{display:block;height:100%;background:var(--rojo)}
+.gcards.mini{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.gmini{padding:12px 14px 12px 16px;gap:6px}
+.gmini .g-gen{font-size:13px;padding:2px 8px}
+.gmini .g-name{font-size:14.5px;margin-top:0}
+.gm-f{font-size:13px;color:var(--fg2)}
+.gm-p{font-weight:700;color:var(--fg)}
+@media (max-width:900px){.grow.gr-h{display:none}.grow+.grow{border-top:1px solid var(--line2)}.gr-t{white-space:normal}.grow{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}.gr-f,.gr-a{grid-column:1/-1}.gr-i,.gr-p{display:none}.gr-s{justify-self:end}}
 .mat{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;color:var(--fg2);letter-spacing:.02em}
 .asbtns{display:flex;gap:6px;flex:none}
 .asb{min-width:98px;padding:0 12px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:700;cursor:pointer;color:var(--fg2)}
@@ -1019,7 +1045,7 @@ function vDiplomados() {
     <div class="tools"><input type="search" id="q-gen" placeholder="Buscar diplomado o sede" value="${esc(ui.q)}" aria-label="Buscar"><button class="btn pri w" data-act="new-gen">+ Nueva generación</button></div></div>
   ${newGenForm()}
   <div class="tools" style="justify-content:space-between"><div class="tabs">${tabs.map(([k, n, f]) => `<button class="tab ${k === t[0] ? 'on' : ''}" data-tab="${k}">${n}<em>${D.gens.filter(f).length}</em></button>`).join('')}</div>
-    <div class="tools"><span class="small muted">Ver</span><div class="tabs"><button class="tab ${ui.genGroup === 'area' ? 'on' : ''}" data-act="gen-group" data-v="area">Por área</button><button class="tab ${ui.genGroup === 'programa' ? 'on' : ''}" data-act="gen-group" data-v="programa">Por programa</button><button class="tab ${ui.genGroup === 'lista' ? 'on' : ''}" data-act="gen-group" data-v="lista">Por fecha</button></div></div></div>
+    <div class="tools"><span class="small muted">Ver</span><div class="tabs"><button class="tab ${ui.genGroup === 'area' ? 'on' : ''}" data-act="gen-group" data-v="area">Por área</button><button class="tab ${ui.genGroup === 'programa' ? 'on' : ''}" data-act="gen-group" data-v="programa">Por programa</button><button class="tab ${ui.genGroup === 'lista' ? 'on' : ''}" data-act="gen-group" data-v="lista">Por fecha</button></div><div class="tabs vtog" role="group" aria-label="Formato">${[['lista', 'Lista', '<path d="M4 6h16M4 12h16M4 18h16"/>'], ['mini', 'Compactas', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'], ['cards', 'Tarjetas', '<rect x="4" y="4" width="16" height="7" rx="1.5"/><rect x="4" y="13" width="16" height="7" rx="1.5"/>']].map(([v, t, ic]) => `<button class="tab ${genView() === v ? 'on' : ''}" data-act="gen-view" data-v="${v}" title="${t}" aria-label="Ver como ${t.toLowerCase()}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${t}</span></button>`).join('')}</div></div></div>
   <div class="tools"><span class="small muted">Área</span><div class="chips"><button class="chip ${!ui.genArea ? 'on' : ''}" data-act="gen-area" data-v="">Todas <span style="opacity:.7">${L0.length}</span></button>${areas.map(a => `<button class="chip ${ui.genArea === a ? 'on' : ''}" data-act="gen-area" data-v="${esc(a)}">${esc(a)} <span style="opacity:.7">${L0.filter(x => areaOf(x) === a).length}</span></button>`).join('')}</div></div>
   ${L.length ? `<div class="gwrap">${L.map((x, i) => {
       const k = y => ui.genGroup === 'area' ? areaOf(y) : ui.genGroup === 'programa' ? y.g.programaId : (y.sc.inicio || y.g.inicioTentativo || '').slice(0, 7);
@@ -1031,7 +1057,7 @@ function vDiplomados() {
         else if (ui.genGroup === 'programa') h = `<div class="g-prog"><span class="g-dot" style="background:${D.col[x.g.programaId]}"></span><b>${esc(x.nombre)}</b><span>${grp.length} en esta vista · ${x.total} en total</span></div>`;
         else { const m = k(x); h = `<div class="g-area"><h2>${m ? MESL[Number(m.slice(5, 7)) - 1] + ' ' + m.slice(0, 4) : 'Sin fecha'}</h2><span>${grp.length} generaci${grp.length === 1 ? 'ón' : 'ones'}</span></div>`; }
       }
-      return `${nuevo && i > 0 ? '</div>' : ''}${h}${nuevo ? '<div class="gcards">' : ''}${genCard(x, ui.genGroup === 'programa')}`; }).join('')}</div></div>` : '<div class="empty card">No hay generaciones en esta vista.</div>'}`;
+      return `${nuevo && i > 0 ? '</div>' : ''}${h}${nuevo ? (genView() === 'lista' ? '<div class="glist"><div class="grow gr-h"><span>Programa</span><span>Estatus</span><span>Fechas</span><span>Avance</span><span class="gr-i">Inscritos</span><span class="gr-p">Preparación</span></div>' : `<div class="${genView() === 'mini' ? 'gcards mini' : 'gcards'}">`) : ''}${genView() === 'lista' ? genRow(x, ui.genGroup === 'programa') : genView() === 'mini' ? genMini(x, ui.genGroup === 'programa') : genCard(x, ui.genGroup === 'programa')}`; }).join('')}</div></div>` : '<div class="empty card">No hay generaciones en esta vista.</div>'}`;
 }
 const GI = {
   cal:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
@@ -1041,6 +1067,37 @@ const GI = {
   mod:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5"/></svg>',
   user:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6"/></svg>',
 };
+function genView() { if (!ui.genView) { try { ui.genView = localStorage.getItem('educon.genView') || 'lista'; } catch { ui.genView = 'lista'; } } return ui.genView; }
+function genAv(x) {
+  const all = x.sc.all || [], hechas = all.filter(f => f <= TODAY).length;
+  const enCurso = x.sc.inicio && x.sc.inicio <= TODAY && (!x.sc.fin || x.sc.fin >= TODAY);
+  if (enCurso && all.length) return { pct:Math.round(hechas / all.length * 100), t:`${hechas}/${all.length}` };
+  if (x.st === 'Concluido') return { pct:100, t:'Terminó' };
+  if (x.dpi != null && x.dpi > 0) return { pct:0, t:`en ${x.dpi} día${x.dpi === 1 ? '' : 's'}`, cd:x.dpi <= 30 };
+  return { pct:0, t:'—' };
+}
+const genFechas = x => x.sc.inicio ? `${fd(x.sc.inicio, false)} → ${fd(x.sc.fin, false)}${x.sc.fin && x.sc.fin.slice(0, 4) !== TODAY.slice(0, 4) ? ' ' + x.sc.fin.slice(2, 4) : ''}` : x.g.inicioTentativo ? `${MESL[pd(x.g.inicioTentativo).getMonth()]} ${x.g.inicioTentativo.slice(0, 4)} <span class="g-tent">tent.</span>` : '<span class="muted">Sin fecha</span>';
+function genRow(x, enPrograma) {
+  const av = genAv(x), col = D.col[x.g.programaId] || 'var(--gris)';
+  const ins = insDe(x);
+  return `<a class="grow" href="#d-${x.id}" style="--pc:${col}">
+    <span class="gr-n"><span class="g-dot" style="background:${col}"></span><span class="gr-t"><b>${enPrograma ? 'Generación ' + x.gen : esc(x.nombre)}</b>${enPrograma ? '' : ` <span class="gr-g">Gen ${x.gen}</span>`}</span></span>
+    <span class="gr-s">${stPill(x.st)}</span>
+    <span class="gr-f">${genFechas(x)}</span>
+    <span class="gr-a"><span class="g-tl"><i style="width:${av.pct}%"></i></span><span class="${av.cd ? 'gr-cd' : ''}">${av.t}</span></span>
+    <span class="gr-i" title="Inscritos">${ins ? `<b>${ins}</b>${x.g.meta ? `<span class="muted">/${x.g.meta}</span>` : ''}` : '<span class="muted">—</span>'}</span>
+    <span class="gr-p" title="Preparación"><span class="gr-pb"><i style="width:${Math.round(x.prep * 100)}%"></i></span>${Math.round(x.prep * 100)}%</span>
+  </a>`;
+}
+function genMini(x, enPrograma) {
+  const av = genAv(x), col = D.col[x.g.programaId] || 'var(--gris)';
+  return `<a class="gcard gmini" href="#d-${x.id}" style="--pc:${col}">
+    <div class="g-top"><span class="g-gen">Gen ${x.gen}</span>${stPill(x.st)}</div>
+    ${enPrograma ? '' : `<div class="g-name">${esc(x.nombre)}</div>`}
+    <div class="gm-f">${genFechas(x)}</div>
+    <div class="gm-b"><span class="g-tl"><i style="width:${av.pct}%"></i></span><span class="${av.cd ? 'gr-cd' : ''}">${av.t}</span><span class="gm-p" title="Preparación">${Math.round(x.prep * 100)}%</span></div>
+  </a>`;
+}
 function genCard(x, enPrograma) {
   const col = D.col[x.g.programaId] || 'var(--gris)';
   const all = x.sc.all || [], hechas = all.filter(f => f <= TODAY).length;
@@ -1994,6 +2051,7 @@ document.addEventListener('click', async e => {
   else if (act === 'as-todos') { const { g, f } = a.dataset; for (const [aid, al] of (D.alByGen[g] || [])) if (al.estatus !== 'Baja' && !S.asist[`${g}__${f}__${aid}`]) await setAsis(g, f, aid, 'P'); toast('Lista marcada'); }
   else if (act === 'as-qr') { const { g, f } = a.dataset; const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); const expira = new Date(Date.now() + 6 * 36e5).toISOString(); try { await db.collection('qr').doc(token).set({ genId:g, fecha:f, expira, creadoPor:myId || null }); ui.qr = { token, genId:g, fecha:f, expira }; render(); } catch (err) { toast('No se pudo generar el QR'); } }
   else if (act === 'qr-close') { ui.qr = null; render(); }
+  else if (act === 'gen-view') { ui.genView = a.dataset.v; try { localStorage.setItem('educon.genView', ui.genView); } catch {} render(); }
   else if (act === 'gen-group') { ui.genGroup = a.dataset.v; render(); }
   else if (act === 'cal-color') { ui.calColor = a.dataset.v; render(); }
   else if (act === 'f-clear') { ui.orgEtapa = ui.orgPrior = ui.orgProg = ui.orgQ = ''; render(); }
