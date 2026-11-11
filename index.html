@@ -1129,6 +1129,60 @@ function sel(opts, val, attrs, blank = true) { return `<select class="in" ${attr
 const B = (col, id, f, t = 'text') => `data-b="${col}|${id}|${f}" data-t="${t}"`;
 function fld(label, input, wide) { return `<div class="f ${wide ? 'wide' : ''}"><label>${label}</label>${input}</div>`; }
 
+// ---------- calendario en PDF (imprimir / guardar como PDF) ----------
+const DIAS_L = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MESES_L = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const fLarga = d => { const t = pd(d); return `${DIAS_L[t.getDay()]} ${t.getDate()} de ${MESES_L[t.getMonth()]} de ${t.getFullYear()}`; };
+const fMedia = d => { const t = pd(d); return `${t.getDate()} de ${MESES_L[t.getMonth()]} de ${t.getFullYear()}`; };
+function calPdf(id, mid) {
+  const x = D.byId[id]; if (!x) return; const g = x.g;
+  const mods = x.sc.mods.filter(m => m.ses.length && (!mid || m.id === mid));
+  if (!mods.length) { toast('Ese módulo todavía no tiene fechas'); return; }
+  const ses = mods.flatMap(m => m.ses); const ini = ses[0], fin = ses[ses.length - 1];
+  const dias = [...new Set(ses.map(d => pd(d).getDay()))].sort((a, b) => (a || 7) - (b || 7));
+  const horarios = [...new Set(ses.map(d => horarioDe(g, d)).filter(Boolean))];
+  const horarioTxt = g.horarioDia && Object.keys(g.horarioDia).length ? dias.map(d => (g.horarioDia[d] ? DIAS_L[d][0].toUpperCase() + DIAS_L[d].slice(1) + ' ' + g.horarioDia[d].replace(/^(Lun|Mar|Mié|Jue|Vie|Sáb|Dom)\s+/, '') : '')).filter(Boolean).join(' · ') : horarios.join(' · ');
+  const hrs = ses.reduce((a, d) => a + (durHora(horarioDe(g, d)) || 0), 0);
+  const sinClase = [];
+  for (let d = ini; d <= fin; d = addDays(d, 1)) { const w = pd(d).getDay(); if (!dias.includes(w)) continue; const why = inhSet.get(d); if (why && why !== 'Descanso') sinClase.push([d, why]); else if ((g.excluir || []).includes(d)) sinClase.push([d, 'Sin clase para este grupo']); }
+  const uno = !!mid; const m0 = mods[0];
+  const titulo = uno ? `Módulo ${m0.idx + 1}: ${m0.nombre || 'Sin nombre'}` : `${x.nombre}`;
+  let n = 0;
+  const filas = mods.map(m => `${uno ? '' : `<tr class="mh"><td colspan="4">Módulo ${m.idx + 1} · ${esc(m.nombre || 'Sin nombre')}</td></tr>`}${m.ses.map(d => `<tr><td class="c">${++n}</td><td>${DIAS_L[pd(d).getDay()][0].toUpperCase() + DIAS_L[pd(d).getDay()].slice(1)}</td><td>${fMedia(d)}</td><td>${esc(horarioDe(g, d) || 'Por confirmar')}</td></tr>`).join('')}`).join('');
+  const logo = ($('.side-top img') || {}).src || '';
+  const docTitle = `Calendario – ${x.nombre} – Gen ${x.gen}${uno ? ' – Módulo ' + (m0.idx + 1) : ''}`;
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(docTitle)}</title><style>
+  @page{size:letter;margin:14mm 14mm 16mm}
+  *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#231f1e;margin:0;font-size:11.5px}
+  .bar{background:#E5202E;color:#fff;padding:14px 18px;display:flex;align-items:center;gap:16px;border-radius:6px}
+  .bar img{height:34px} .bar .t{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
+  h1{font-size:20px;margin:16px 0 2px} .sub{color:#6b6260;font-size:12.5px;margin:0 0 12px}
+  .info{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin:10px 0 14px;padding:10px 12px;background:#faf6f5;border-radius:6px}
+  .info b{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#8a7f7d;margin-bottom:1px}
+  table{width:100%;border-collapse:collapse} th{background:#231f1e;color:#fff;text-align:left;padding:6px 8px;font-size:10px;letter-spacing:.05em;text-transform:uppercase}
+  td{padding:5px 8px;border-bottom:1px solid #eee3e1} td.c{width:34px;text-align:center;color:#8a7f7d}
+  tr.mh td{background:#fbeff0;font-weight:700;color:#b3141f;padding-top:8px;border-bottom:1px solid #f0d3d6}
+  tr{page-break-inside:avoid} .nota{margin-top:14px;font-size:10.5px;color:#6b6260} .nota b{color:#231f1e}
+  .pie{margin-top:18px;padding-top:8px;border-top:1px solid #eee3e1;font-size:9.5px;color:#8a7f7d;display:flex;justify-content:space-between}
+  .tip{background:#fff7d6;border:1px solid #f2df8f;padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:12px} @media print{.tip{display:none}}
+  </style></head><body>
+  <div class="tip">Para guardarlo como PDF, en la ventana de impresión elige <b>"Guardar como PDF"</b> como destino.</div>
+  <div class="bar">${logo ? `<img src="${logo}" alt="IBERO Tijuana">` : '<b>IBERO Tijuana</b>'}<div><div class="t">Educación Continua y Posgrado</div><div style="font-size:14px;font-weight:700">${uno ? 'Calendario del módulo' : 'Calendario de clases'}</div></div></div>
+  <h1>${esc(titulo)}</h1><p class="sub">${uno ? esc(x.nombre) + ' · ' : ''}Generación ${x.gen}${g.etiqueta ? ' · ' + esc(g.etiqueta) : ''}</p>
+  <div class="info">
+    <div><b>Periodo</b>${fLarga(ini)} – ${fLarga(fin)}</div>
+    <div><b>Días y horario</b>${esc(g.horarioDia && Object.keys(g.horarioDia).length && horarioTxt ? horarioTxt : (() => { const dd = dias.map(d => DIAS_L[d]).join(' y '); return dd[0].toUpperCase() + dd.slice(1) + (horarioTxt ? ' · ' + horarioTxt : ' · horario por confirmar'); })())}</div>
+    <div><b>Sede / modalidad</b>${esc([g.sede, g.modalidad && g.modalidad !== g.sede ? g.modalidad : ''].filter(Boolean).join(' · ') || '—')}</div>
+    <div><b>Sesiones</b>${ses.length} sesiones${hrs ? ` · ${hTxt(Math.round(hrs * 10) / 10)} en vivo` : ''}</div>
+  </div>
+  <table><thead><tr><th>#</th><th>Día</th><th>Fecha</th><th>Horario</th></tr></thead><tbody>${filas}</tbody></table>
+  ${sinClase.length ? `<div class="nota"><b>Sin clase en este periodo:</b> ${sinClase.map(([d, w]) => `${fMedia(d).replace(/ de \d{4}$/, '')} (${esc(w)})`).join(' · ')}</div>` : ''}
+  <div class="pie"><span>Fechas sujetas a cambio. Cualquier ajuste se avisará con anticipación.</span><span>Generado el ${fMedia(TODAY)}</span></div>
+  <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),300));<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { toast('Tu navegador bloqueó la ventana. Permite ventanas emergentes para esta página.'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
 function vGen(id) {
   const x = D.byId[id]; if (!x) return `<div class="empty">Esta generación ya no existe. <a href="#diplomados">Volver</a></div>`;
   const g = x.g; const b = (f, t) => B('generaciones', id, f, t);
@@ -1138,7 +1192,7 @@ function vGen(id) {
   const mods = x.sc.mods;
   return `<div class="head"><div><div class="crumb"><a href="#diplomados">Diplomados</a> / ${esc(x.nombre)}</div><h1>${esc(x.nombre)} <span class="gbadge" style="font-size:16px;vertical-align:4px">Generación ${x.gen}</span></h1>
     <p>${stPill(x.st)} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
-    <div class="tools"><a class="btn" href="#pr-${g.programaId}">Ver programa</a><button class="btn danger w" data-act="del" data-col="generaciones" data-id="${id}">Eliminar generación</button></div></div>
+    <div class="tools">${x.sc.all.length ? `<button class="btn" data-act="cal-pdf" data-id="${id}" title="Calendario para alumnos, listo para guardar en PDF">Calendario PDF</button>` : ''}<a class="btn" href="#pr-${g.programaId}">Ver programa</a><button class="btn danger w" data-act="del" data-col="generaciones" data-id="${id}">Eliminar generación</button></div></div>
   ${x.missing.length && !['Concluido','Pausado'].includes(x.st) ? `<div class="note"><b>Falta:</b> ${esc(x.missing.join(' · '))}</div>` : ''}
   <section class="card pad sec"><h2>Datos de la generación</h2>
     <div class="form">
@@ -1193,7 +1247,7 @@ function vGen(id) {
       <td class="fechas">${m.ses.length ? `${fd(m.ses[0], false)} → ${fd(m.ses[m.ses.length - 1])}<div class="muted">${m.ses.length} sesiones ${m.auto ? '<span class="tag">auto</span>' : '<span class="tag fija">fechas fijas</span>'}${ih.length ? ` <span style="color:var(--crit)">· ${ih.length} en día inhábil</span>` : ''}</div>` : `<span class="muted">${!g.inicio ? 'Falta fecha de inicio' : !(g.dias||[]).length ? 'Faltan días de clase' : 'Indica nº de clases'}</span>`}</td>
       <td style="white-space:nowrap"><button class="btn ghost sm w" title="Subir" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="-1">↑</button><button class="btn ghost sm w" title="Bajar" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="1">↓</button>
         ${m.auto ? (m.ses.length ? `<button class="btn ghost sm w" data-act="fix" data-id="${id}" data-m="${m.id}" title="Congelar estas fechas">Fijar</button>` : '') : `<button class="btn ghost sm w" data-act="unfix" data-id="${id}" data-m="${m.id}" title="Que las fechas se calculen solas">Auto</button>`}
-        <button class="btn ghost sm danger w" data-act="del-mod" data-id="${id}" data-m="${m.id}" title="Eliminar módulo">✕</button></td></tr>`; }).join('') : `<tr><td colspan="8" class="empty">Sin módulos todavía. Agrega uno o copia los de una generación anterior.</td></tr>`}
+        ${m.ses.length ? `<button class="btn ghost sm" data-act="cal-pdf" data-id="${id}" data-m="${m.id}" title="Calendario de este módulo en PDF (para el profesor)">PDF</button>` : ''}<button class="btn ghost sm danger w" data-act="del-mod" data-id="${id}" data-m="${m.id}" title="Eliminar módulo">✕</button></td></tr>`; }).join('') : `<tr><td colspan="8" class="empty">Sin módulos todavía. Agrega uno o copia los de una generación anterior.</td></tr>`}
     </tbody></table></div>
   </section>
   ${x.sc.all.length ? `<section class="card pad sec"><h2>Sesiones (${x.sc.all.length})</h2><div class="chips">${x.sc.mods.flatMap(m => m.ses.map(d => `<span class="chip" style="cursor:default;background:${modCol(m.idx)};border-color:transparent;color:#1b1b1b" title="Módulo ${m.idx+1}">M${m.idx + 1} · ${fdw(d)}</span>`)).join('')}</div></section>` : ''}
@@ -2051,6 +2105,7 @@ document.addEventListener('click', async e => {
   else if (act === 'as-todos') { const { g, f } = a.dataset; for (const [aid, al] of (D.alByGen[g] || [])) if (al.estatus !== 'Baja' && !S.asist[`${g}__${f}__${aid}`]) await setAsis(g, f, aid, 'P'); toast('Lista marcada'); }
   else if (act === 'as-qr') { const { g, f } = a.dataset; const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); const expira = new Date(Date.now() + 6 * 36e5).toISOString(); try { await db.collection('qr').doc(token).set({ genId:g, fecha:f, expira, creadoPor:myId || null }); ui.qr = { token, genId:g, fecha:f, expira }; render(); } catch (err) { toast('No se pudo generar el QR'); } }
   else if (act === 'qr-close') { ui.qr = null; render(); }
+  else if (act === 'cal-pdf') { calPdf(a.dataset.id, a.dataset.m); }
   else if (act === 'gen-view') { ui.genView = a.dataset.v; try { localStorage.setItem('educon.genView', ui.genView); } catch {} render(); }
   else if (act === 'gen-group') { ui.genGroup = a.dataset.v; render(); }
   else if (act === 'cal-color') { ui.calColor = a.dataset.v; render(); }
