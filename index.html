@@ -468,6 +468,16 @@ details summary{cursor:pointer}
 .gm-f{font-size:13px;color:var(--fg2)}
 .gm-p{font-weight:700;color:var(--fg)}
 @media (max-width:900px){.grow.gr-h{display:none}.grow+.grow{border-top:1px solid var(--line2)}.gr-t{white-space:normal}.grow{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}.gr-f,.gr-a{grid-column:1/-1}.gr-i,.gr-p{display:none}.gr-s{justify-self:end}}
+.dl{display:flex;flex-direction:column;gap:16px;max-width:860px}
+.dl-step{display:flex;gap:14px;align-items:flex-start}
+.dl-n{width:28px;height:28px;border-radius:50%;background:var(--rojo);color:#fff;font-weight:800;display:grid;place-items:center;flex:none;margin-top:2px}
+.dl-l{font-weight:700;margin-bottom:6px}
+.dl-step select{max-width:100%}
+.dl-prev{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.dl-ph{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;background:color-mix(in srgb,var(--rojo) 6%,var(--panel));border-bottom:1px solid var(--line)}
+.dl-list{max-height:360px;overflow:auto}
+.dl-mh{padding:7px 14px;font-size:12px;font-weight:700;color:var(--rojo);background:var(--bg);border-bottom:1px solid var(--line2)}
+.dl-r{display:flex;justify-content:space-between;gap:10px;padding:6px 14px;font-size:13.5px;border-bottom:1px solid var(--line2)}
 .mat{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;color:var(--fg2);letter-spacing:.02em}
 .asbtns{display:flex;gap:6px;flex:none}
 .asb{min-width:98px;padding:0 12px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:700;cursor:pointer;color:var(--fg2)}
@@ -787,6 +797,7 @@ const NAV = [
   ['tablero','Tablero','<path d="M4 13h6V4H4zm10 7h6V11h-6zM4 20h6v-4H4zm10-11h6V4h-6z"/>'],
   ['calendario','Calendario','<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4m8-4v4"/>'],
   ['diplomados','Diplomados','<path d="M3 7l9-4 9 4-9 4zM7 9.5V15c0 1.5 2.2 3 5 3s5-1.5 5-3V9.5"/>'],
+  ['descargas','Calendarios PDF','<path d="M7 3h7l5 5v12a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M12 11v6m-3-3l3 3 3-3"/>'],
   ['vinculacion','Vinculación','<path d="M3 21h18M5 21V5a1 1 0 011-1h8a1 1 0 011 1v16M15 9h3a1 1 0 011 1v11M8 8h1m3 0h0M8 12h1m3 0h0M8 16h1m3 0h0"/>'],
   ['profesores','Profesores','<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>'],
   ['programas','Catálogo','<path d="M4 5h16M4 12h16M4 19h10"/>'],
@@ -830,6 +841,7 @@ function render() {
   else if (r.startsWith('t-')) html = vTarea(r.slice(2));
   else if (r === 'profesores') html = vProfes();
   else if (r.startsWith('p-')) html = vProfe(r.slice(2));
+  else if (r === 'descargas') html = vDescargas();
   else if (r === 'programas') html = vProgramas();
   else if (r.startsWith('pr-')) html = vPrograma(r.slice(3));
   else if (r === 'vinculacion') html = vVinc();
@@ -1182,6 +1194,31 @@ function calPdf(id, mid) {
   const w = window.open('', '_blank');
   if (!w) { toast('Tu navegador bloqueó la ventana. Permite ventanas emergentes para esta página.'); return; }
   w.document.open(); w.document.write(html); w.document.close();
+}
+function vDescargas() {
+  const para = ui.dlPara === 'profesor' ? 'profesor' : 'alumno';
+  const vivos = ['Activo','En lanzamiento','En planeación','En desarrollo'];
+  const gs = D.gens.filter(x => x.sc.all.length && (ui.dlTodos || vivos.includes(x.st))).sort((a, b) => a.nombre.localeCompare(b.nombre) || a.gen - b.gen);
+  const gid = gs.some(x => x.id === ui.dlGen) ? ui.dlGen : (gs[0] || {}).id;
+  const x = D.byId[gid]; const mods = x ? x.sc.mods.filter(m => m.ses.length) : [];
+  const mid = mods.some(m => m.id === ui.dlMod) ? ui.dlMod : (mods[0] || {}).id;
+  const sel_ = para === 'profesor' ? mods.filter(m => m.id === mid) : mods;
+  const ses = sel_.flatMap(m => m.ses);
+  const opt = (v, t, on) => `<option value="${esc(v)}" ${on ? 'selected' : ''}>${esc(t)}</option>`;
+  return `<div class="dash-hero"><div><div class="dh-hi">Descargas</div><h1>Calendarios en PDF</h1><p>Elige para quién es y qué diplomado, revisa las fechas y descárgalo.</p></div></div>
+  <section class="card pad sec dl">
+    <div class="dl-step"><span class="dl-n">1</span><div><div class="dl-l">¿Para quién es?</div>
+      <div class="tabs"><button class="tab ${para === 'alumno' ? 'on' : ''}" data-act="dl-para" data-v="alumno">Alumnos · diplomado completo</button><button class="tab ${para === 'profesor' ? 'on' : ''}" data-act="dl-para" data-v="profesor">Profesor · un módulo</button></div></div></div>
+    <div class="dl-step"><span class="dl-n">2</span><div style="flex:1;min-width:0"><div class="dl-l">Diplomado o curso</div>
+      ${gs.length ? `<select class="in flt" id="dl-gen" aria-label="Diplomado">${gs.map(g => opt(g.id, `${g.nombre} · Gen ${g.gen}${g.sc.inicio ? ' · ' + fd(g.sc.inicio) : ''} · ${g.st}`, g.id === gid)).join('')}</select>` : '<div class="muted small">No hay generaciones con fechas.</div>'}
+      <label class="small muted" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" class="flt" id="dl-todos" ${ui.dlTodos ? 'checked' : ''}> Incluir concluidos y pausados</label></div></div>
+    ${para === 'profesor' && x ? `<div class="dl-step"><span class="dl-n">3</span><div style="flex:1;min-width:0"><div class="dl-l">Módulo</div>
+      <select class="in flt" id="dl-mod" aria-label="Módulo">${mods.map(m => opt(m.id, `Módulo ${m.idx + 1} · ${m.nombre || 'Sin nombre'} · ${fd(m.ses[0], false)} → ${fd(m.ses[m.ses.length - 1], false)}`, m.id === mid)).join('')}</select></div></div>` : ''}
+    ${x ? `<div class="dl-prev"><div class="dl-ph"><div><b>${esc(para === 'profesor' ? `Módulo ${(sel_[0] || {}).idx + 1} · ${(sel_[0] || {}).nombre || ''}` : x.nombre)}</b><div class="small muted">${esc(x.nombre)} · Generación ${x.gen} · ${ses.length} sesiones · ${fd(ses[0])} → ${fd(ses[ses.length - 1])}</div></div>
+      <button class="btn pri" data-act="cal-pdf" data-id="${x.id}" ${para === 'profesor' ? `data-m="${mid}"` : ''}>Descargar PDF</button></div>
+      <div class="dl-list">${sel_.map(m => `${para === 'alumno' ? `<div class="dl-mh">Módulo ${m.idx + 1} · ${esc(m.nombre || 'Sin nombre')}</div>` : ''}${m.ses.map(d => `<div class="dl-r"><span>${esc(fLarga(d).replace(/^./, c => c.toUpperCase()))}</span><span class="muted">${esc(horarioDe(x.g, d) || 'Horario por confirmar')}</span></div>`).join('')}`).join('')}</div></div>` : ''}
+  </section>
+  <div class="note small">Al descargar se abre la ventana de impresión: en <b>Destino</b> elige <b>"Guardar como PDF"</b>. El PDF lleva logo, periodo, días y horario, sede, la lista de sesiones y los días sin clase. No incluye nombres de profesores.</div>`;
 }
 function vGen(id) {
   const x = D.byId[id]; if (!x) return `<div class="empty">Esta generación ya no existe. <a href="#diplomados">Volver</a></div>`;
@@ -1658,11 +1695,11 @@ function nuevaMatricula(anio) {
 function matriculaPersona(a) { for (const o of ((D.persona || {})[perKey(a)] || [])) if (S.alumnos[o]?.matricula) return S.alumnos[o].matricula; return nuevaMatricula(); }
 const COB_CLS = { 'Al corriente':'a-ok', 'Atrasado':'a-urg', 'Liquidado':'s-activo', 'Sin plan':'s-fin', 'Baja':'s-pausa' };
 const SECC = {
-  admin:['tablero','calendario','diplomados','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes','equipo'],
-  coordinacion:['tablero','calendario','diplomados','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes'],
+  admin:['tablero','calendario','diplomados','descargas','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes','equipo'],
+  coordinacion:['tablero','calendario','diplomados','descargas','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes'],
   cobranza:['alumnos','cobranza','pendientes'],
-  asistencia:['asistencia','alumnos','pendientes'],
-  lectura:['tablero','calendario','diplomados','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes'],
+  asistencia:['asistencia','descargas','alumnos','pendientes'],
+  lectura:['tablero','calendario','diplomados','descargas','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes'],
 };
 const secOf = r => r.startsWith('t-') ? 'pendientes' : r.startsWith('d-') ? 'diplomados' : r.startsWith('p-') ? 'profesores' : r.startsWith('pr-') ? 'programas' : r.startsWith('o-') ? 'vinculacion' : r.startsWith('a-') ? 'alumnos' : r.startsWith('as-') ? 'asistencia' : r;
 const permitido = r => (SECC[ROL] || SECC.coordinacion).includes(secOf(r));
@@ -2012,6 +2049,9 @@ document.addEventListener('change', e => {
     const fr = new FileReader(); fr.onload = () => { try { const wb = XLSX.read(fr.result, { type:'array', cellDates:true }); ui.impData = parseLibro(wb); if (!ui.impData.hojas.length) toast('No encontré hojas con alumnos y pagos en ese archivo'); render(); } catch (e) { toast('No se pudo leer el archivo'); } }; fr.readAsArrayBuffer(el.files[0]);
   } else if (el.id === 'al-gen') { ui.alGen = el.value; render(); }
   else if (el.id === 'al-bajas') { ui.alBajas = el.checked; render(); }
+  else if (el.id === 'dl-gen') { ui.dlGen = el.value; ui.dlMod = ''; render(); }
+  else if (el.id === 'dl-mod') { ui.dlMod = el.value; render(); }
+  else if (el.id === 'dl-todos') { ui.dlTodos = el.checked; render(); }
   else if (el.id === 'al-conc') { ui.alConc = el.checked; if (!el.checked && ui.alGen && !enCobranza(ui.alGen)) ui.alGen = ''; render(); }
   else if (el.id === 'cb-gen') { ui.cbGen = el.value; render(); }
   else if (el.id === 'as-gen') { ui.asGen = el.value; ui.asFecha = ''; render(); }
@@ -2105,6 +2145,7 @@ document.addEventListener('click', async e => {
   else if (act === 'as-todos') { const { g, f } = a.dataset; for (const [aid, al] of (D.alByGen[g] || [])) if (al.estatus !== 'Baja' && !S.asist[`${g}__${f}__${aid}`]) await setAsis(g, f, aid, 'P'); toast('Lista marcada'); }
   else if (act === 'as-qr') { const { g, f } = a.dataset; const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); const expira = new Date(Date.now() + 6 * 36e5).toISOString(); try { await db.collection('qr').doc(token).set({ genId:g, fecha:f, expira, creadoPor:myId || null }); ui.qr = { token, genId:g, fecha:f, expira }; render(); } catch (err) { toast('No se pudo generar el QR'); } }
   else if (act === 'qr-close') { ui.qr = null; render(); }
+  else if (act === 'dl-para') { ui.dlPara = a.dataset.v; render(); }
   else if (act === 'cal-pdf') { calPdf(a.dataset.id, a.dataset.m); }
   else if (act === 'gen-view') { ui.genView = a.dataset.v; try { localStorage.setItem('educon.genView', ui.genView); } catch {} render(); }
   else if (act === 'gen-group') { ui.genGroup = a.dataset.v; render(); }
