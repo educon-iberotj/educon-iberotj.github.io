@@ -478,6 +478,37 @@ details summary{cursor:pointer}
 .dl-list{max-height:360px;overflow:auto}
 .dl-mh{padding:7px 14px;font-size:12px;font-weight:700;color:var(--rojo);background:var(--bg);border-bottom:1px solid var(--line2)}
 .dl-r{display:flex;justify-content:space-between;gap:10px;padding:6px 14px;font-size:13.5px;border-bottom:1px solid var(--line2)}
+.gtop{display:grid;grid-template-columns:1fr 1.4fr;gap:18px;border-top:4px solid var(--rojo)}
+.gt-c{display:flex;flex-direction:column;gap:6px}
+.gt-h{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--rojo)}
+.gt-coord{display:grid;grid-template-columns:1.2fr 1fr 1.3fr;gap:8px}
+@media (max-width:900px){.gtop{grid-template-columns:1fr}.gt-coord{grid-template-columns:1fr}}
+.mstats{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 10px}
+.mstats span{font-size:13px;color:var(--fg2);background:var(--panel);border:1px solid var(--line);padding:4px 11px;border-radius:999px}
+.mstats b{color:var(--fg)} .mstats .warn{background:var(--warn-bg);border-color:transparent;color:var(--warn)}
+.mcards{display:flex;flex-direction:column;gap:10px}
+.mcard{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:start;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--mc);border-radius:14px;transition:box-shadow .15s}
+.mcard:hover{box-shadow:0 6px 18px rgba(35,31,30,.07)}
+.mcard.now{border-color:color-mix(in srgb,var(--ok) 45%,var(--line));border-left-color:var(--mc)}
+.mcard.done{opacity:.78}
+.mc-n{width:40px;height:40px;border-radius:12px;background:var(--mc);color:#1b1b1b;font:800 18px/40px var(--f-disp);text-align:center}
+.mc-b{display:flex;flex-direction:column;gap:10px;min-width:0}
+.mc-top{display:flex;gap:10px;align-items:center}
+.mc-name{font-weight:700;font-size:15.5px;border-color:transparent;background:transparent;padding-left:6px}
+.mc-name:hover,.mc-name:focus{border-color:var(--line);background:var(--panel)}
+.mc-f{display:grid;grid-template-columns:2fr 1.3fr .8fr 90px;gap:10px}
+.mc-f label{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mc-f label>span{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--fg3)}
+.mc-d{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.mc-fe{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.mc-fe svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+.mc-a{display:flex;flex-direction:column;gap:4px;align-items:stretch}
+.mses{margin-top:10px} .mses summary{cursor:pointer;font-weight:600;font-size:13.5px;color:var(--fg2);margin-bottom:8px}
+@media (max-width:820px){.mcard{grid-template-columns:36px 1fr}.mc-a{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}.mc-f{grid-template-columns:1fr 1fr}.mc-n{width:34px;height:34px;line-height:34px;font-size:15px}}
+.phora{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:4px 0 14px;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--info) 8%,var(--panel));border:1px solid color-mix(in srgb,var(--info) 25%,var(--line))}
+.phora>div{display:flex;flex-direction:column;gap:2px}
+.phora b{font:700 20px/1.2 var(--f-disp)} .phora small{font-size:12px;color:var(--fg3)}
+@media (max-width:820px){.phora{grid-template-columns:1fr 1fr}}
 .mat{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;color:var(--fg2);letter-spacing:.02em}
 .asbtns{display:flex;gap:6px;flex:none}
 .asb{min-width:98px;padding:0 12px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:700;cursor:pointer;color:var(--fg2)}
@@ -618,6 +649,10 @@ const uid = p => p + '-' + Date.now().toString(36) + Math.random().toString(36).
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 const SEDES = ['Campus Río','Campus Playas','Coparmex','En línea','Sede de la empresa'];
+const SALONES = { 'Campus Playas':['Salón 319','Salón 320'], 'Campus Río':['Primer piso','Segundo piso'] };
+const HORARIOS = ['9:00–13:00','9:00–14:00','10:00–14:00','16:00–20:00','17:00–21:00','18:00–21:00','18:00–22:00','7:00–9:00'];
+function precioHora() { const e = esquemas().find(e => e.porHora != null); if (e) return Number(e.porHora) || 0; const d = esquemas().find(e => e.id === 'diplomados'); return d ? Math.round(d.base / 80) : 0; }
+function precioHoraFuente() { const e = esquemas().find(e => e.porHora != null); return e ? `del esquema «${e.nombre}» (cámbialo en Catálogo)` : 'precio de un diplomado IBERO entre 80 horas'; }
 const MODAL = ['Presencial','En línea','Híbrida','A distancia (en vivo)'];
 const TIPOS = ['Diplomado','Curso','Certificación','Taller','Posgrado'];
 const OFERTA = ['Abierta','Cerrada (a la medida)','En diseño','Pausado'];
@@ -1231,31 +1266,71 @@ function vGen(id) {
     <p>${stPill(x.st)} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
     <div class="tools">${x.sc.all.length ? `<button class="btn" data-act="cal-pdf" data-id="${id}" title="Calendario para alumnos, listo para guardar en PDF">Calendario PDF</button>` : ''}<a class="btn" href="#pr-${g.programaId}">Ver programa</a><button class="btn danger w" data-act="del" data-col="generaciones" data-id="${id}">Eliminar generación</button></div></div>
   ${x.missing.length && !['Concluido','Pausado'].includes(x.st) ? `<div class="note"><b>Falta:</b> ${esc(x.missing.join(' · '))}</div>` : ''}
+  <section class="card pad sec gtop">
+    <div class="gt-c"><div class="gt-h">Colaboración</div>
+      <input class="in" value="${esc(g.colaboracion || '')}" placeholder="Ej. COPARMEX, Colegio de Médicos…" list="dl-colab" ${b('colaboracion')}>
+      <datalist id="dl-colab">${[...new Set(D.gens.map(o => o.g.colaboracion).filter(Boolean).flatMap(c => c.split(/\s*,\s*/)).concat(['COPARMEX']))].map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+      <div class="small muted">Asociaciones o empresas que colaboran en este programa. Sepáralas con coma.</div></div>
+    <div class="gt-c"><div class="gt-h">Coordinador del programa</div>
+      <div class="gt-coord"><input class="in" value="${esc(g.coordinador ?? g.responsable ?? '')}" placeholder="Nombre" aria-label="Nombre del coordinador" ${b('coordinador')}>
+      <input class="in" type="tel" value="${esc(g.coordTel || '')}" placeholder="Teléfono" aria-label="Teléfono del coordinador" ${b('coordTel')}>
+      <input class="in" type="email" value="${esc(g.coordCorreo || '')}" placeholder="Correo" aria-label="Correo del coordinador" ${b('coordCorreo')}></div></div>
+  </section>
   <section class="card pad sec"><h2>Datos de la generación</h2>
     <div class="form">
       ${fld('Programa', sel(Object.entries(S.programas).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre)).map(([k, p]) => [k, p.nombre]), g.programaId, b('programaId', 'opt'), false))}
       ${fld('Número de generación', `<input class="in" type="number" min="1" value="${g.numGen ?? ''}" placeholder="${x.gen} (automático)" ${b('numGen', 'num')}>`)}
-      ${fld('Nombre corto (mes, sede…)', `<input class="in" value="${esc(g.etiqueta || '')}" ${b('etiqueta')}>`)}
       ${fld('Fecha de inicio', `<input class="in" type="date" value="${esc(g.inicio || '')}" ${b('inicio', 'opt')}>`)}
-      ${fld('Inicio tentativo (si aún no hay fecha)', `<input class="in" type="date" value="${esc(g.inicioTentativo || '')}" ${b('inicioTentativo', 'opt')}>`)}
       ${fld(`Fecha de fin ${(g.modulos||[]).some(m => m.clases || (m.fijas||[]).length) ? '<span class="muted">(se calcula con los módulos)</span>' : x.sc.finEst ? `<span class="muted">(estimada: ${fd(x.sc.fin)}, ${x.eq.meses} meses)</span>` : ''}`, (g.modulos||[]).some(m => m.clases || (m.fijas||[]).length) ? `<input class="in" value="${fd(x.sc.fin)}" disabled>` : `<input class="in" type="date" value="${esc(g.finManual || '')}" ${b('finManual', 'opt')}>`)}
       <div class="f"><span class="lbl">Días de clase</span><div class="chips">${[1,2,3,4,5,6,0].map(d => `<button class="chip w ${(g.dias||[]).map(Number).includes(d) ? 'on' : ''}" data-act="dia" data-id="${id}" data-d="${d}">${DIA[d]}</button>`).join('')}</div></div>
-      ${fld('Horario', `<input class="in" value="${esc(g.horario || '')}" placeholder="18:00–22:00" ${b('horario')}>`)}
-      ${fld(`Horas totales <span class="muted">${x.horasFuente === 'calc' ? `(calculadas: ${hTxt(x.hc)})` : x.horasFuente === 'prog' ? '(las del programa)' : x.hc ? `(según calendario: ${hTxt(x.hc)})` : ''}</span>`, `<input class="in num" type="number" min="0" step="0.5" value="${g.horas ?? ''}" placeholder="${x.horas ? x.horas : 'Ej. 80'}" ${b('horas', 'num')}>`)}
+      ${fld('Horario <span class="muted">(elige o escribe)</span>', `<input class="in" value="${esc(g.horario || '')}" placeholder="Elige un horario" list="dl-hor" ${b('horario')}><datalist id="dl-hor">${HORARIOS.map(h => `<option value="${h}">`).join('')}</datalist>`)}
+      ${fld(`Horas totales <span class="muted">${x.horasFuente === 'calc' ? `(calculadas: ${hTxt(x.hc)})` : x.horasFuente === 'prog' ? '(las del programa)' : x.hc ? `(según calendario: ${hTxt(x.hc)})` : '(elige o escribe)'}</span>`, `<input class="in num" type="number" min="0" step="0.5" value="${g.horas ?? ''}" placeholder="${x.horas ? x.horas : 'Elige'}" list="dl-horas" ${b('horas', 'num')}><datalist id="dl-horas">${[16,20,24,32,40,60,80,100,120,160,180].map(h => `<option value="${h}">${h} horas</option>`).join('')}</datalist>`)}
       ${fld('Campus / sede', sel(SEDES.concat(g.sede && !SEDES.includes(g.sede) ? [g.sede] : []), g.sede, b('sede')))}
+      ${fld('Salón <span class="muted">(elige o escribe)</span>', `<input class="in" value="${esc(g.salon || '')}" placeholder="${(SALONES[g.sede] || []).length ? 'Elige un salón' : 'Ej. Sala de juntas'}" list="dl-salon" ${b('salon')}><datalist id="dl-salon">${(SALONES[g.sede] || Object.values(SALONES).flat()).map(v => `<option value="${esc(v)}">`).join('')}</datalist>`)}
       ${fld('Modalidad', sel(MODAL, g.modalidad, b('modalidad')))}
-      ${fld('Esquema de precios', sel([['', 'Automático · ' + ((esquemas().find(e => e.id === esqAuto(g.programaId, x.p)) || {}).nombre || 'sin esquema')], ...esquemas().map(e => [e.id, e.nombre]), ['ninguno', 'Otro (precio manual)']], g.esquemaPrecio || '', b('esquemaPrecio', 'opt'), false))}
-      ${!x.eq ? fld('Costo total', `<input class="in" type="number" min="0" value="${g.costoInscripcion ?? ''}" ${b('costoInscripcion', 'num')}>`) : ''}
-      ${fld('Plan de pago', `<input class="in" value="${esc(g.planPago || '')}" ${b('planPago')}>`)}
-      ${fld('Promoción', `<input class="in" value="${esc(g.promocion || '')}" ${b('promocion')}>`)}
-      ${fld('Responsable', `<input class="in" value="${esc(g.responsable || '')}" ${b('responsable')}>`)}
-      ${fld('Módulos planeados', `<input class="in" type="number" min="0" value="${g.modulosPlaneados ?? ''}" placeholder="${(g.modulos||[]).length}" ${b('modulosPlaneados', 'num')}>`)}
+      ${fld('Módulos planeados', sel([...Array(12)].map((_, k) => [String(k + 1), `${k + 1} módulo${k ? 's' : ''}`]), g.modulosPlaneados != null ? String(g.modulosPlaneados) : '', b('modulosPlaneados', 'num')))}
       ${fld('Días sin clase solo para este grupo', `<input class="in" value="${esc((g.excluir || []).join(', '))}" placeholder="2027-02-23, 2027-03-02" ${b('excluir', 'dates')}>`)}
       <div class="f" style="justify-content:flex-end"><label style="display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px;color:var(--fg)"><input type="checkbox" ${g.pausada ? 'checked' : ''} ${b('pausada', 'bool')}> Generación en pausa</label></div>
       ${fld('Notas', `<textarea class="in" ${b('notas')}>${esc(g.notas || '')}</textarea>`, true)}
     </div>
   </section>
-  <section class="card pad sec"><div class="sec-h"><h2>Inscripciones${x.eq ? ' y precios' : ''}</h2>${x.eq ? `<span class="small muted">${esc(x.eq.nombre)} · duración ${x.eq.meses} meses · <a href="#programas">editar precios</a></span>` : ''}</div>
+  <section class="sec"><div class="sec-h"><h2>Módulos y profesores</h2><div class="tools">
+    <select class="in flt" id="copy-src" style="width:auto;max-width:260px" aria-label="Copiar módulos de"><option value="">Copiar módulos de…</option>${others.map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('')}</select>
+    <button class="btn w" data-act="copy-mods" data-id="${id}">Copiar</button><button class="btn pri w" data-act="add-mod" data-id="${id}">+ Módulo</button></div></div>
+    <div class="mstats">${(() => { const conf = mods.filter(m => m.estatusProfe === 'Confirmado').length, sinP = mods.filter(m => !m.profesorId).length, nses = x.sc.all.length;
+      return `<span><b>${mods.length}</b>${g.modulosPlaneados ? ` de ${g.modulosPlaneados}` : ''} módulos</span><span><b>${nses}</b> sesiones</span><span><b>${conf}</b> profesores confirmados</span>${sinP ? `<span class="warn"><b>${sinP}</b> sin profesor</span>` : ''}`; })()}</div>
+    <div class="mcards">
+    ${mods.length ? mods.map(m => { const mb = (f, t) => `data-m="${id}|${m.id}|${f}" data-t="${t || 'text'}"`; const ih = m.ses.filter(d => inhSet.has(d)); const hoy = m.ses.length && m.ses[0] <= TODAY && m.ses[m.ses.length - 1] >= TODAY; const fin = m.ses.length && m.ses[m.ses.length - 1] < TODAY;
+      return `<div class="mcard ${hoy ? 'now' : ''} ${fin ? 'done' : ''}" style="--mc:${modCol(m.idx)}">
+      <div class="mc-n">${m.idx + 1}</div>
+      <div class="mc-b">
+        <div class="mc-top"><input class="in mc-name" value="${esc(m.nombre || '')}" placeholder="Nombre del módulo" ${mb('nombre')}>${hoy ? '<span class="pill s-activo">En curso</span>' : fin ? '<span class="pill s-fin">Terminado</span>' : ''}</div>
+        <div class="mc-f">
+          <label><span>Profesor(a)</span>${sel(profOpts, m.profesorId, mb('profesorId', 'opt'))}</label>
+          <label><span>Estatus</span>${sel(EST_PROF, m.estatusProfe || 'Sin asignar', mb('estatusProfe'), false)}</label>
+          <label><span>Alta</span>${sel([['si','Sí'],['no','No']], m.alta === true ? 'si' : m.alta === false ? 'no' : '', mb('alta', 'tri'))}</label>
+          <label class="mc-cl"><span>Clases</span><input class="in num" type="number" min="0" max="80" value="${m.clases ?? ''}" ${m.auto ? '' : 'disabled title="Fechas fijas"'} ${mb('clases', 'num')}></label>
+        </div>
+        <div class="mc-d">${m.ses.length ? `<span class="mc-fe">${GI.cal}${fd(m.ses[0], false)} → ${fd(m.ses[m.ses.length - 1])}</span><span class="muted">${m.ses.length} sesiones</span>${m.auto ? '<span class="tag">auto</span>' : '<span class="tag fija">fechas fijas</span>'}${ih.length ? `<span style="color:var(--crit)">${ih.length} en día inhábil</span>` : ''}` : `<span class="muted">${!g.inicio ? 'Falta fecha de inicio' : !(g.dias||[]).length ? 'Faltan días de clase' : 'Indica el número de clases'}</span>`}</div>
+      </div>
+      <div class="mc-a"><button class="btn ghost sm w" title="Subir" aria-label="Subir" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="-1">↑</button><button class="btn ghost sm w" title="Bajar" aria-label="Bajar" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="1">↓</button>
+        ${m.auto ? (m.ses.length ? `<button class="btn ghost sm w" data-act="fix" data-id="${id}" data-m="${m.id}" title="Congelar estas fechas">Fijar</button>` : '') : `<button class="btn ghost sm w" data-act="unfix" data-id="${id}" data-m="${m.id}" title="Que las fechas se calculen solas">Auto</button>`}
+        ${m.ses.length ? `<button class="btn ghost sm" data-act="cal-pdf" data-id="${id}" data-m="${m.id}" title="Calendario de este módulo en PDF (para el profesor)">PDF</button>` : ''}<button class="btn ghost sm danger w" data-act="del-mod" data-id="${id}" data-m="${m.id}" title="Eliminar módulo" aria-label="Eliminar módulo">✕</button></div>
+    </div>`; }).join('') : `<div class="empty card">Sin módulos todavía. Agrega uno o copia los de una generación anterior.</div>`}
+    </div>
+    ${x.sc.all.length ? `<details class="mses"><summary>Ver las ${x.sc.all.length} sesiones</summary><div class="chips">${x.sc.mods.flatMap(m => m.ses.map(d => `<span class="chip" style="cursor:default;background:${modCol(m.idx)};border-color:transparent;color:#1b1b1b" title="Módulo ${m.idx+1}">M${m.idx + 1} · ${fdw(d)}</span>`)).join('')}</div></details>` : ''}
+    <div class="note small">Las fechas de cada módulo se calculan solas con la fecha de inicio, los días de clase y los inhábiles del calendario IBERO. «Fijar» congela las fechas de un módulo; «Auto» las vuelve a calcular.</div>
+  </section>
+  <section class="card pad sec"><div class="sec-h"><h2>Inscripciones y precios</h2>${x.eq ? `<span class="small muted">${esc(x.eq.nombre)} · duración ${x.eq.meses} meses · <a href="#programas">editar precios</a></span>` : ''}</div>
+    <div class="form" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+      ${fld('Esquema de precios', sel([['', 'Automático · ' + ((esquemas().find(e => e.id === esqAuto(g.programaId, x.p)) || {}).nombre || 'sin esquema')], ...esquemas().map(e => [e.id, e.nombre]), ['ninguno', 'Otro (precio manual)']], g.esquemaPrecio || '', b('esquemaPrecio', 'opt'), false))}
+      ${!x.eq ? fld('Costo total', `<input class="in num" type="number" min="0" value="${g.costoInscripcion ?? ''}" ${b('costoInscripcion', 'num')}>`) : ''}
+    </div>
+    ${!x.eq ? (() => { const ph = precioHora(); const h = x.horas || 0; const sug = Math.round(ph * h);
+      return `<div class="phora"><div><span class="lbl">Precio por hora de referencia</span><b>${money(ph)}</b><small>${esc(precioHoraFuente())}</small></div>
+        <div><span class="lbl">Horas de esta generación</span><b>${h ? hTxt(h) : '—'}</b><small>${h ? (x.horasFuente === 'calc' ? 'calculadas con el calendario' : 'capturadas') : 'captura las horas arriba'}</small></div>
+        <div><span class="lbl">Costo sugerido</span><b>${h ? money(sug) : '—'}</b><small>${h ? `${money(ph)} × ${hTxt(h)}` : ''}</small>${h && canWrite ? `<button class="btn sm w" data-act="usar-ph" data-id="${id}" data-v="${sug}" style="margin-top:6px">Usar este costo</button>` : ''}</div>
+        <div><span class="lbl">Costo capturado</span><b>${g.costoInscripcion ? money(g.costoInscripcion) : '—'}</b><small>${g.costoInscripcion && h ? `equivale a ${money(g.costoInscripcion / h)} por hora` : ''}</small></div></div>`; })() : ''}
     <div class="form" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
       ${fld('Meta de inscritos (cupo mínimo)', `<input class="in num" type="number" min="0" value="${g.meta ?? ''}" ${b('meta', 'num')}>`)}
       ${alAct(x).length ? fld('Inscritos', `<input class="in num" value="${alAct(x).length}" disabled title="Se cuentan solos desde Alumnos"><a class="small" href="#alumnos" data-act="al-ver" data-g="${id}">Ver lista de alumnos</a>`) : fld('Inscritos', `<input class="in num" type="number" min="0" value="${g.inscritos ?? ''}" ${b('inscritos', 'num')}>`)}
@@ -1269,25 +1344,6 @@ function vGen(id) {
         ${ig.est ? '<div class="note small">Para que el cálculo salga exacto, reparte los inscritos por forma de pago abajo; los que no repartas se calculan con el promedio de las opciones.</div>' : ''}`; })()}
     ${x.eq ? `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th><th>Inscritos</th></tr></thead><tbody>${[{ nombre:'Precio de lista', desc:0, pagos:Number(x.eq.pagosLista) || 1 }, ...(x.eq.opciones || [])].map(o => { const tot = r2(x.eq.base * (1 - (Number(o.desc) || 0) / 100)); const n = Number(o.pagos) || 1; return `<tr><td>${esc(o.nombre)}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${n > 1 ? `${n} pagos de <b>${money(r2(tot / n))}</b>` : 'Un solo pago'}</td><td style="width:90px"><input class="in num" type="number" min="0" value="${(g.inscritosPorOpcion || {})[o.nombre] ?? ''}" data-io="${id}|${esc(o.nombre)}" aria-label="Inscritos con ${esc(o.nombre)}"></td></tr>`; }).join('')}</tbody></table></div>` : ''}
   </section>
-  <section class="sec"><div class="sec-h"><h2>Módulos y profesores</h2><div class="tools">
-    <select class="in flt" id="copy-src" style="width:auto;max-width:260px" aria-label="Copiar módulos de"><option value="">Copiar módulos de…</option>${others.map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('')}</select>
-    <button class="btn w" data-act="copy-mods" data-id="${id}">Copiar</button><button class="btn pri w" data-act="add-mod" data-id="${id}">+ Módulo</button></div></div>
-    <div class="note small">Las fechas de cada módulo se calculan solas: empiezan en la fecha de inicio, usan los días de clase y saltan los días inhábiles del calendario IBERO. Un módulo con la etiqueta <span class="tag fija">fechas fijas</span> conserva las fechas que traía el Excel; usa «Recalcular» para que se mueva solo.</div>
-    <div class="card tbl-w"><table class="mods"><thead><tr><th>#</th><th>Módulo</th><th>Profesor(a)</th><th>Estatus</th><th>Alta</th><th>Clases</th><th>Fechas</th><th></th></tr></thead><tbody>
-    ${mods.length ? mods.map(m => { const mb = (f, t) => `data-m="${id}|${m.id}|${f}" data-t="${t || 'text'}"`; const ih = m.ses.filter(d => inhSet.has(d)); return `<tr>
-      <td class="n"><span class="mnum" style="background:${modCol(m.idx)}">${m.idx + 1}</span></td>
-      <td style="min-width:200px"><input class="in" value="${esc(m.nombre || '')}" placeholder="Nombre del módulo" ${mb('nombre')}></td>
-      <td style="min-width:170px">${sel(profOpts, m.profesorId, mb('profesorId', 'opt'))}</td>
-      <td style="min-width:130px">${sel(EST_PROF, m.estatusProfe || 'Sin asignar', mb('estatusProfe'), false)}</td>
-      <td style="min-width:70px">${sel([['si','Sí'],['no','No']], m.alta === true ? 'si' : m.alta === false ? 'no' : '', mb('alta', 'tri'))}</td>
-      <td style="width:76px"><input class="in num" type="number" min="0" max="40" value="${m.clases ?? ''}" ${m.auto ? '' : 'disabled title="Fechas fijas"'} ${mb('clases', 'num')}></td>
-      <td class="fechas">${m.ses.length ? `${fd(m.ses[0], false)} → ${fd(m.ses[m.ses.length - 1])}<div class="muted">${m.ses.length} sesiones ${m.auto ? '<span class="tag">auto</span>' : '<span class="tag fija">fechas fijas</span>'}${ih.length ? ` <span style="color:var(--crit)">· ${ih.length} en día inhábil</span>` : ''}</div>` : `<span class="muted">${!g.inicio ? 'Falta fecha de inicio' : !(g.dias||[]).length ? 'Faltan días de clase' : 'Indica nº de clases'}</span>`}</td>
-      <td style="white-space:nowrap"><button class="btn ghost sm w" title="Subir" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="-1">↑</button><button class="btn ghost sm w" title="Bajar" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="1">↓</button>
-        ${m.auto ? (m.ses.length ? `<button class="btn ghost sm w" data-act="fix" data-id="${id}" data-m="${m.id}" title="Congelar estas fechas">Fijar</button>` : '') : `<button class="btn ghost sm w" data-act="unfix" data-id="${id}" data-m="${m.id}" title="Que las fechas se calculen solas">Auto</button>`}
-        ${m.ses.length ? `<button class="btn ghost sm" data-act="cal-pdf" data-id="${id}" data-m="${m.id}" title="Calendario de este módulo en PDF (para el profesor)">PDF</button>` : ''}<button class="btn ghost sm danger w" data-act="del-mod" data-id="${id}" data-m="${m.id}" title="Eliminar módulo">✕</button></td></tr>`; }).join('') : `<tr><td colspan="8" class="empty">Sin módulos todavía. Agrega uno o copia los de una generación anterior.</td></tr>`}
-    </tbody></table></div>
-  </section>
-  ${x.sc.all.length ? `<section class="card pad sec"><h2>Sesiones (${x.sc.all.length})</h2><div class="chips">${x.sc.mods.flatMap(m => m.ses.map(d => `<span class="chip" style="cursor:default;background:${modCol(m.idx)};border-color:transparent;color:#1b1b1b" title="Módulo ${m.idx+1}">M${m.idx + 1} · ${fdw(d)}</span>`)).join('')}</div></section>` : ''}
   ${linkedTasks('gen', id)}
   <section class="card pad sec"><div class="sec-h"><h2>Organizaciones afines</h2><span class="small muted">${orgs.length} en el directorio de vinculación</span></div>
     <div class="chips">${orgs.length ? orgs.map(([oid, o]) => `<a class="chip" href="#o-${oid}">${esc(o.nombre)}</a>`).join('') : '<span class="muted small">Ninguna todavía. Márcalas desde Vinculación.</span>'}</div></section>`;
@@ -1298,8 +1354,16 @@ function vCalendario() {
   const [y, m] = ui.calMes.split('-').map(Number);
   const first = new Date(y, m - 1, 1); const start = new Date(first); start.setDate(1 - first.getDay());
   const days = []; for (let i = 0; i < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(ds(d)); }
-  const filt = s => !ui.calProg || s.x.g.programaId === ui.calProg;
-  const evCol = s => ui.calColor === 'modulo' ? modCol(s.m.idx) : D.col[s.x.g.programaId];
+  const vista = ui.calVista || 'general';
+  const lugarDe = x => x.g.modalidad === 'En línea' || x.g.sede === 'En línea' ? 'En línea' : (x.g.sede || 'Sin sede');
+  const salonDe = x => lugarDe(x) === 'En línea' ? 'En línea' : `${(x.g.sede || 'Sin sede').replace('Campus ', '')} · ${x.g.salon || 'sin salón'}`;
+  const grupoDe = x => vista === 'sede' ? lugarDe(x) : vista === 'salon' ? salonDe(x) : '';
+  const gruposVis = vista === 'general' ? [] : [...new Set(D.gens.filter(x => x.sc.all.length && (x.sc.fin || '') >= `${ui.calMes}-01` && (x.sc.inicio || '') <= `${ui.calMes}-31`).map(grupoDe))].sort();
+  const PAL_L = ['#E5202E','#2F6FB0','#2E8B57','#C77700','#7B3FA0','#0F8C8C','#A0522D','#5A6B7B'];
+  const colGrupo = gname => PAL_L[[...new Set(D.gens.map(grupoDe))].sort().indexOf(gname) % PAL_L.length];
+  const selG = vista !== 'general' && gruposVis.includes(ui.calGrupo) ? ui.calGrupo : '';
+  const filt = s => (!ui.calProg || s.x.g.programaId === ui.calProg) && (!selG || grupoDe(s.x) === selG);
+  const evCol = s => vista !== 'general' ? colGrupo(grupoDe(s.x)) : ui.calColor === 'modulo' ? modCol(s.m.idx) : D.col[s.x.g.programaId];
   const cells = days.map(d => { const evs = (D.byDay.get(d) || []).filter(filt); const ih = inhSet.get(d);
     return `<div class="d ${d.slice(0, 7) !== ui.calMes ? 'out' : ''} ${ih ? 'inh' : ''} ${d === TODAY ? 'hoy' : ''}"><span class="dn">${pd(d).getDate()}</span>${ih ? `<span class="inhl">${esc(ih)}</span>` : ''}
       ${evs.map(s => `<button class="ev ${s.conf ? 'conf' : ''}" style="background:${evCol(s)}" data-go="d-${s.gid}" title="${esc(s.x.label)} · Módulo ${s.m.idx + 1}${s.prof ? ' · ' + esc(profName(s.prof)) : ''}${s.conf ? ' · CHOQUE: el profesor tiene otra clase este día' : ''}">G${s.x.gen}·M${s.m.idx + 1} ${esc(s.x.nombre)}</button>`).join('')}</div>`; }).join('');
@@ -1307,7 +1371,7 @@ function vCalendario() {
   const agenda = monthDays.filter(d => (D.byDay.get(d) || []).some(filt) || (inhSet.get(d) && inhSet.get(d) !== 'Descanso')).map(d => `<div class="li"><div class="when">${fdw(d)}</div><div class="small" style="min-width:0">${inhSet.get(d) ? `<div class="muted">${esc(inhSet.get(d))}</div>` : ''}${(D.byDay.get(d) || []).filter(filt).map(s => `<div><a href="#d-${s.gid}"><span class="swatch" style="display:inline-block;margin:0 6px 0 0;background:${evCol(s)}"></span>${esc(s.x.nombre)}</a> · M${s.m.idx + 1}${s.conf ? ' <b style="color:var(--crit)">choque</b>' : ''}</div>`).join('')}</div></div>`).join('');
   // gantt anual
   const yr = y; const y0 = `${yr}-01-01`, y1 = `${yr}-12-31`; const span = daysBetween(y0, y1) + 1;
-  const rows = D.gens.filter(x => x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
+  const rows = D.gens.filter(x => x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg) && (!selG || grupoDe(x) === selG)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
   const nowPct = TODAY.slice(0, 4) == yr ? daysBetween(y0, TODAY) / span * 100 : null;
   const gantt = rows.map(x => { const a = x.sc.inicio < y0 ? y0 : x.sc.inicio, b = x.sc.fin > y1 ? y1 : x.sc.fin; const l = daysBetween(y0, a) / span * 100, w = (daysBetween(a, b) + 1) / span * 100;
     return `<div class="gl"><a href="#d-${x.id}">${esc(x.nombre)}</a> <span class="muted small">Gen ${x.gen}</span></div><div class="gt">${nowPct != null ? `<span class="now" style="left:${nowPct}%"></span>` : ''}<span class="gb" style="left:${l}%;width:${w}%;background:${D.col[x.g.programaId]}" title="${esc(x.label)}: ${fd(x.sc.inicio)} → ${fd(x.sc.fin)}"></span></div>`; }).join('');
@@ -1316,8 +1380,10 @@ function vCalendario() {
   return `<div class="head"><div><h1>Calendario</h1><p>Todas las clases de todos los diplomados. Los días rayados son inhábiles según el calendario oficial IBERO; los domingos son de descanso.</p></div>
     <div class="tools"><select class="in flt" id="cal-prog" style="width:auto" aria-label="Filtrar por programa"><option value="">Todos los programas</option>${progsUsed.map(([k, n]) => `<option value="${k}" ${ui.calProg === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
     <button class="btn" data-act="cal" data-d="-1" aria-label="Mes anterior">←</button><b style="min-width:150px;text-align:center">${MESL[m - 1]} ${y}</b><button class="btn" data-act="cal" data-d="1" aria-label="Mes siguiente">→</button><button class="btn ghost" data-act="cal" data-d="0">Hoy</button></div></div>
-  <div class="tools"><span class="small muted">Colorear por</span><div class="tabs"><button class="tab ${ui.calColor !== 'modulo' ? 'on' : ''}" data-act="cal-color" data-v="programa">Programa</button><button class="tab ${ui.calColor === 'modulo' ? 'on' : ''}" data-act="cal-color" data-v="modulo">Módulo (como en Excel)</button></div>
-    ${ui.calColor === 'modulo' ? `<div class="chips">${PALETA_MOD.slice(0, 6).map((c, i) => `<span class="chip" style="cursor:default;background:${c};border-color:transparent;color:#1b1b1b">Módulo ${['I','II','III','IV','V','VI'][i]}</span>`).join('')}</div>` : ''}</div>
+  <div class="tools"><span class="small muted">Ver</span><div class="tabs">${[['general','General'],['sede','Por modalidad y sede'],['salon','Por salón']].map(([v, t]) => `<button class="tab ${vista === v ? 'on' : ''}" data-act="cal-vista" data-v="${v}">${t}</button>`).join('')}</div>
+    ${vista !== 'general' ? `<div class="chips"><button class="chip ${!selG ? 'on' : ''}" data-act="cal-grupo" data-v="">Todos</button>${gruposVis.map(gname => `<button class="chip ${selG === gname ? 'on' : ''}" data-act="cal-grupo" data-v="${esc(gname)}"><span class="g-dot" style="background:${colGrupo(gname)};width:9px;height:9px;display:inline-block;margin-right:5px;vertical-align:0"></span>${esc(gname)} <span class="muted">${D.gens.filter(x => grupoDe(x) === gname && x.sc.all.some(d => d.startsWith(ui.calMes))).length}</span></button>`).join('')}</div>` : ''}</div>
+  ${vista === 'general' ? `<div class="tools"><span class="small muted">Colorear por</span><div class="tabs"><button class="tab ${ui.calColor !== 'modulo' ? 'on' : ''}" data-act="cal-color" data-v="programa">Programa</button><button class="tab ${ui.calColor === 'modulo' ? 'on' : ''}" data-act="cal-color" data-v="modulo">Módulo (como en Excel)</button></div>
+    ${ui.calColor === 'modulo' ? `<div class="chips">${PALETA_MOD.slice(0, 6).map((c, i) => `<span class="chip" style="cursor:default;background:${c};border-color:transparent;color:#1b1b1b">Módulo ${['I','II','III','IV','V','VI'][i]}</span>`).join('')}</div>` : ''}</div>` : ''}
   <div class="card" style="overflow:hidden"><div class="cal">${DIA.map(d => `<div class="dh">${d}</div>`).join('')}${cells}</div><div class="agenda list pad">${agenda || '<div class="empty">Sin clases este mes.</div>'}</div></div>
   <section class="card pad sec"><div class="sec-h"><h2>Línea de tiempo ${yr}</h2><span class="small muted">${rows.length} generaciones</span></div>
     <div class="gantt"><div></div><div class="gm">${MES.map(x => `<span>${x}</span>`).join('')}</div>${gantt || '<div></div><div class="muted small">Sin generaciones con fechas este año.</div>'}</div></section>
@@ -2146,9 +2212,12 @@ document.addEventListener('click', async e => {
   else if (act === 'as-qr') { const { g, f } = a.dataset; const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); const expira = new Date(Date.now() + 6 * 36e5).toISOString(); try { await db.collection('qr').doc(token).set({ genId:g, fecha:f, expira, creadoPor:myId || null }); ui.qr = { token, genId:g, fecha:f, expira }; render(); } catch (err) { toast('No se pudo generar el QR'); } }
   else if (act === 'qr-close') { ui.qr = null; render(); }
   else if (act === 'dl-para') { ui.dlPara = a.dataset.v; render(); }
+  else if (act === 'usar-ph') { const g = strip(S.gens[a.dataset.id]); g.costoInscripcion = Number(a.dataset.v); save('generaciones', a.dataset.id, g, 'Costo actualizado'); }
   else if (act === 'cal-pdf') { calPdf(a.dataset.id, a.dataset.m); }
   else if (act === 'gen-view') { ui.genView = a.dataset.v; try { localStorage.setItem('educon.genView', ui.genView); } catch {} render(); }
   else if (act === 'gen-group') { ui.genGroup = a.dataset.v; render(); }
+  else if (act === 'cal-vista') { ui.calVista = a.dataset.v; ui.calGrupo = ''; render(); }
+  else if (act === 'cal-grupo') { ui.calGrupo = a.dataset.v; render(); }
   else if (act === 'cal-color') { ui.calColor = a.dataset.v; render(); }
   else if (act === 'f-clear') { ui.orgEtapa = ui.orgPrior = ui.orgProg = ui.orgQ = ''; render(); }
 });
@@ -2183,7 +2252,7 @@ $('#exp').addEventListener('click', async () => {
   const wb = XLSX.utils.book_new();
   const add = (name, rows) => { const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = Object.keys(rows[0] || {}).map(k => ({ wch: Math.min(48, Math.max(10, k.length + 2, ...rows.slice(0, 80).map(r => String(r[k] ?? '').length))) })); XLSX.utils.book_append_sheet(wb, ws, name); };
   const gs = [...D.gens].sort((a, b) => (b.sc.inicio || '0').localeCompare(a.sc.inicio || '0'));
-  add('Diplomados', gs.map(x => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nombre corto':x.g.etiqueta, 'Tipo':x.p.tipo, 'Área':x.p.area, 'Horas':x.horas || '', 'Estatus':x.st, 'Inicio':x.sc.inicio || '', 'Inicio tentativo':x.g.inicioTentativo || '', 'Fin':x.sc.fin || '', 'Días':diasTxt(x.g), 'Horario':x.g.horario, 'Sede':x.g.sede, 'Modalidad':x.g.modalidad, 'Módulos':(x.g.modulos || []).length, 'Profes confirmados':x.conf, 'Altas':x.altas, 'Fin estimado':x.sc.finEst ? 'Sí' : '', 'Esquema de precios':x.eq ? x.eq.nombre : 'Manual', 'Precio de lista':x.eq ? x.eq.base : (x.g.costoInscripcion ?? ''), 'Opciones de pago':x.eq ? x.eq.opciones.map(o => { const t = r2(x.eq.base * (1 - o.desc / 100)); return `${o.nombre} ${o.desc}%: ${money(t)}${o.pagos > 1 ? ` (${o.pagos} × ${money(r2(t / o.pagos))})` : ''}`; }).join(' | ') : '', 'Plan de pago':x.g.planPago, 'Promoción':x.g.promocion, 'Meta de inscritos':x.g.meta ?? '', 'Inscritos':x.g.inscritos ?? '', 'Vendido':ingreso(x).total || '', 'Cobrado':ingreso(x).total ? ingreso(x).cobrado : '', 'Por cobrar':ingreso(x).total ? ingreso(x).porCobrar : '', 'Responsable':x.g.responsable, 'Preparación %':Math.round(x.prep * 100), 'Atención':x.aten, 'Pendientes':x.missing.join(' · '), 'Notas':x.g.notas })));
+  add('Diplomados', gs.map(x => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nombre corto':x.g.etiqueta, 'Tipo':x.p.tipo, 'Área':x.p.area, 'Horas':x.horas || '', 'Colaboración':x.g.colaboracion || '', 'Coordinador':x.g.coordinador ?? x.g.responsable ?? '', 'Tel. coordinador':x.g.coordTel || '', 'Correo coordinador':x.g.coordCorreo || '', 'Salón':x.g.salon || '', 'Estatus':x.st, 'Inicio':x.sc.inicio || '', 'Inicio tentativo':x.g.inicioTentativo || '', 'Fin':x.sc.fin || '', 'Días':diasTxt(x.g), 'Horario':x.g.horario, 'Sede':x.g.sede, 'Modalidad':x.g.modalidad, 'Módulos':(x.g.modulos || []).length, 'Profes confirmados':x.conf, 'Altas':x.altas, 'Fin estimado':x.sc.finEst ? 'Sí' : '', 'Esquema de precios':x.eq ? x.eq.nombre : 'Manual', 'Precio de lista':x.eq ? x.eq.base : (x.g.costoInscripcion ?? ''), 'Opciones de pago':x.eq ? x.eq.opciones.map(o => { const t = r2(x.eq.base * (1 - o.desc / 100)); return `${o.nombre} ${o.desc}%: ${money(t)}${o.pagos > 1 ? ` (${o.pagos} × ${money(r2(t / o.pagos))})` : ''}`; }).join(' | ') : '', 'Plan de pago':x.g.planPago, 'Promoción':x.g.promocion, 'Meta de inscritos':x.g.meta ?? '', 'Inscritos':x.g.inscritos ?? '', 'Vendido':ingreso(x).total || '', 'Cobrado':ingreso(x).total ? ingreso(x).cobrado : '', 'Por cobrar':ingreso(x).total ? ingreso(x).porCobrar : '', 'Responsable':x.g.responsable, 'Preparación %':Math.round(x.prep * 100), 'Atención':x.aten, 'Pendientes':x.missing.join(' · '), 'Notas':x.g.notas })));
   add('Módulos', gs.flatMap(x => x.sc.mods.map(m => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nº':m.idx + 1, 'Módulo':m.nombre, 'Profesor(a)':profName(m.profesorId), 'Estatus profesor':m.estatusProfe, 'Alta en sistema':m.alta === true ? 'Sí' : m.alta === false ? 'No' : '', 'Clases':m.ses.length || m.clases || '', 'Inicio módulo':m.ses[0] || '', 'Fin módulo':m.ses[m.ses.length - 1] || '', 'Fechas':m.auto ? 'Automáticas' : 'Fijas' }))));
   add('Sesiones', D.ses.map(s => ({ 'Fecha':s.d, 'Día':DIAL[pd(s.d).getDay()], 'Programa':s.x.nombre, 'Generación':s.x.gen, 'Módulo':`${s.m.idx + 1}. ${s.m.nombre || ''}`, 'Sesión':s.k + 1, 'Horario':horarioDe(s.x.g, s.d), 'Sede':s.x.g.sede, 'Profesor(a)':profName(s.prof), 'Choque':s.conf ? 'Sí' : '' })));
   add('Profesores', Object.entries(S.profes).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre)).map(([id, p]) => ({ 'Nombre':p.nombre, 'Teléfono':p.telefono, 'Correo':p.correo, 'Licenciatura':p.licenciatura, 'Maestría':p.maestria, 'Doctorado':p.doctorado, 'Áreas':p.areas, 'Experiencia':p.experiencia, 'Módulos asignados':profStats(id).ms.length, 'Notas':p.notas })));
