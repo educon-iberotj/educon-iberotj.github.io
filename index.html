@@ -514,6 +514,13 @@ details summary{cursor:pointer}
 .cstrip{display:inline-flex;gap:6px;align-items:center;margin-right:6px;vertical-align:middle}
 h1 .cstrip{margin-left:10px}
 .g-col{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.g-top{align-items:flex-start}
+.g-tr{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.g-gen{white-space:nowrap;flex:none}
+.g-tr{max-width:65%}
+.g-logos .cstrip{margin:0;gap:10px;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.g-logos img.clogo{max-width:120px;object-position:right center}
+.g-logos .clogo.ctxt{height:24px !important;line-height:24px !important;font-size:12px !important;max-width:150px}
 .g-colt{font-size:11.5px;color:var(--fg3)}
 .cpick{display:flex;flex-wrap:wrap;gap:8px;min-height:36px;align-items:center}
 .cchip{display:inline-flex;align-items:center;gap:8px;padding:5px 6px 5px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
@@ -671,10 +678,24 @@ const HORARIOS = ['9:00–13:00','9:00–14:00','10:00–14:00','16:00–20:00',
 const colabsDe = g => (g.colabs || []).map(oid => [oid, S.orgs[oid]]).filter(([, o]) => o);
 const logoImg = (o, h = 22, cls = '') => o.logo ? `<img class="clogo ${cls}" src="${o.logo}" alt="${esc(o.nombre)}" title="${esc(o.nombre)}" style="height:${h}px">` : `<span class="clogo ctxt ${cls}" title="${esc(o.nombre)}" style="height:${h}px;line-height:${h}px;font-size:${Math.max(10, Math.round(h * .5))}px">${esc(o.nombre)}</span>`;
 const colabStrip = (g, h) => { const c = colabsDe(g); return c.length ? `<span class="cstrip">${c.map(([, o]) => logoImg(o, h)).join('')}</span>` : ''; };
+// Recorta márgenes vacíos (transparentes o blancos) y deja el logo a máx. 400 px
+function recortarLogo(src) {
+  return new Promise((res, rej) => { const im = new Image(); im.onerror = rej; im.onload = () => {
+    const c0 = document.createElement('canvas'); c0.width = im.width; c0.height = im.height; const x0 = c0.getContext('2d'); x0.drawImage(im, 0, 0);
+    const { data } = x0.getImageData(0, 0, im.width, im.height); let t = im.height, l = im.width, b = -1, r = -1;
+    for (let y = 0; y < im.height; y++) for (let x = 0; x < im.width; x++) { const i = (y * im.width + x) * 4; if (data[i + 3] > 16 && !(data[i] > 242 && data[i + 1] > 242 && data[i + 2] > 242)) { if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y; } }
+    if (r < 0) { r = im.width - 1; b = im.height - 1; l = 0; t = 0; }
+    const p = 3; l = Math.max(0, l - p); t = Math.max(0, t - p); r = Math.min(im.width - 1, r + p); b = Math.min(im.height - 1, b + p);
+    const w = r - l + 1, h = b - t + 1, k = Math.min(1, 400 / Math.max(w, h)); const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext('2d').drawImage(c0, l, t, w, h, 0, 0, c.width, c.height); let u = c.toDataURL('image/webp', .92); if (!u.startsWith('data:image/webp')) u = c.toDataURL('image/png'); res(u); }; im.src = src; });
+}
 function subirLogo(file) {
-  return new Promise((res, rej) => { const r = new FileReader(); r.onerror = rej; r.onload = () => { const im = new Image(); im.onerror = rej; im.onload = () => {
-    const M = 320, k = Math.min(1, M / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
-    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); let u = c.toDataURL('image/webp', .9); if (!u.startsWith('data:image/webp')) u = c.toDataURL('image/png'); res(u); }; im.src = r.result; }; r.readAsDataURL(file); });
+  return new Promise((res, rej) => { const r = new FileReader(); r.onerror = rej; r.onload = () => recortarLogo(r.result).then(res, rej); r.readAsDataURL(file); });
+}
+let logosRevisados = false;
+function revisarLogos() {
+  if (logosRevisados || !canWrite || !db) return; const L = Object.entries(S.orgs || {}).filter(([, o]) => o.logo && !o.logoRecortado); if (!L.length) return; logosRevisados = true;
+  L.forEach(([oid, o]) => recortarLogo(o.logo).then(u => db.doc(`organizaciones/${oid}`).set({ ...strip(o), logo:u, logoRecortado:true })).catch(() => {}));
 }
 function precioHora() { const e = esquemas().find(e => e.porHora != null); if (e) return Number(e.porHora) || 0; const d = esquemas().find(e => e.id === 'diplomados'); return d ? Math.round(d.base / 80) : 0; }
 function precioHoraFuente() { const e = esquemas().find(e => e.porHora != null); return e ? `del esquema «${e.nombre}» (cámbialo en Catálogo)` : 'precio de un diplomado IBERO entre 80 horas'; }
@@ -877,7 +898,7 @@ function renderNav() {
 
 // ---------- vistas ----------
 function render() {
-  const v = $('#view');
+  const v = $('#view'); setTimeout(revisarLogos, 1500);
   if (v.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.type !== 'checkbox' && document.activeElement.type !== 'search') { dirty = true; return; }
   dirty = false;
   renderNav();
@@ -1153,7 +1174,7 @@ function genRow(x, enPrograma) {
   const av = genAv(x), col = D.col[x.g.programaId] || 'var(--gris)';
   const ins = insDe(x);
   return `<a class="grow" href="#d-${x.id}" style="--pc:${col}">
-    <span class="gr-n"><span class="g-dot" style="background:${col}"></span><span class="gr-t">${colabStrip(x.g, 16)}<b>${enPrograma ? 'Generación ' + x.gen : esc(x.nombre)}</b>${enPrograma ? '' : ` <span class="gr-g">Gen ${x.gen}</span>`}</span></span>
+    <span class="gr-n"><span class="g-dot" style="background:${col}"></span><span class="gr-t">${colabStrip(x.g, 24)}<b>${enPrograma ? 'Generación ' + x.gen : esc(x.nombre)}</b>${enPrograma ? '' : ` <span class="gr-g">Gen ${x.gen}</span>`}</span></span>
     <span class="gr-s">${stPill(x.st)}</span>
     <span class="gr-f">${genFechas(x)}</span>
     <span class="gr-a"><span class="g-tl"><i style="width:${av.pct}%"></i></span><span class="${av.cd ? 'gr-cd' : ''}">${av.t}</span></span>
@@ -1164,8 +1185,8 @@ function genRow(x, enPrograma) {
 function genMini(x, enPrograma) {
   const av = genAv(x), col = D.col[x.g.programaId] || 'var(--gris)';
   return `<a class="gcard gmini" href="#d-${x.id}" style="--pc:${col}">
-    <div class="g-top"><span class="g-gen">Gen ${x.gen}</span>${stPill(x.st)}</div>
-    ${enPrograma ? '' : `<div class="g-name">${esc(x.nombre)}</div>`}${colabStrip(x.g, 18) ? `<div class="g-col">${colabStrip(x.g, 18)}</div>` : ''}
+    <div class="g-top"><span class="g-gen">Gen ${x.gen}</span><div class="g-tr">${stPill(x.st)}${colabsDe(x.g).length ? `<div class="g-logos">${colabStrip(x.g, 30)}</div>` : ''}</div></div>
+    ${enPrograma ? '' : `<div class="g-name">${esc(x.nombre)}</div>`}
     <div class="gm-f">${genFechas(x)}</div>
     <div class="gm-b"><span class="g-tl"><i style="width:${av.pct}%"></i></span><span class="${av.cd ? 'gr-cd' : ''}">${av.t}</span><span class="gm-p" title="Preparación">${Math.round(x.prep * 100)}%</span></div>
   </a>`;
@@ -1187,9 +1208,8 @@ function genCard(x, enPrograma) {
     nMod || x.plan ? `<span>${GI.mod}${nMod}${x.plan > nMod ? ` de ${x.plan}` : ''} módulo${(x.plan || nMod) === 1 ? '' : 's'}</span>` : '',
   ].filter(Boolean).join('');
   return `<a class="gcard" href="#d-${x.id}" style="--pc:${col}">
-    <div class="g-top"><span class="g-gen">Gen ${x.gen}</span>${stPill(x.st)}</div>
+    <div class="g-top"><span class="g-gen">Gen ${x.gen}</span><div class="g-tr">${stPill(x.st)}${colabsDe(x.g).length ? `<div class="g-logos" title="En colaboración con ${esc(colabsDe(x.g).map(([, o]) => o.nombre).join(', '))}">${colabStrip(x.g, 40)}</div>` : ''}</div></div>
     ${enPrograma ? '' : `<div class="g-name">${esc(x.nombre)}</div>`}
-    ${colabsDe(x.g).length ? `<div class="g-col"><span class="g-colt">En colaboración con</span>${colabStrip(x.g, 22)}</div>` : ''}
     <div class="g-sub">${esc([x.sc.inicio && /tentativ|^pr[oó]xima$/i.test(x.g.etiqueta || '') ? '' : x.g.etiqueta, x.p.tipo, !enPrograma && x.total > 1 ? `${x.total} generaciones en total` : ''].filter(Boolean).join(' · '))}</div>
     <div class="g-dates">${fechas}</div>
     ${avance}
@@ -2113,7 +2133,7 @@ document.addEventListener('change', e => {
   const el = e.target;
   if (el.id === 'colab-add' && el.value) { const gid = el.dataset.id, oid = el.value; const g = strip(S.gens[gid]); g.colabs = [...new Set([...(g.colabs || []), oid])]; save('generaciones', gid, g, 'Colaborador agregado');
     if (!S.orgs[oid].colaborador) save('organizaciones', oid, { ...strip(S.orgs[oid]), colaborador:true }, 'Guardado'); return; }
-  if (el.dataset.logo && el.files && el.files[0]) { const oid = el.dataset.logo; subirLogo(el.files[0]).then(u => { if (u.length > 300000) { toast('La imagen es muy pesada, intenta con otra'); return; } save('organizaciones', oid, { ...strip(S.orgs[oid]), logo:u, colaborador:true }, 'Logo guardado'); }).catch(() => toast('No se pudo leer la imagen')); return; }
+  if (el.dataset.logo && el.files && el.files[0]) { const oid = el.dataset.logo; subirLogo(el.files[0]).then(u => { if (u.length > 300000) { toast('La imagen es muy pesada, intenta con otra'); return; } save('organizaciones', oid, { ...strip(S.orgs[oid]), logo:u, logoRecortado:true, colaborador:true }, 'Logo guardado'); }).catch(() => toast('No se pudo leer la imagen')); return; }
   if (el.dataset.b) {
     const [col, id, f] = el.dataset.b.split('|');
     if (col === 'tareas') { const v = readVal(el); taskPatch(id, t => { t[f] = v; }, 'Guardado'); return; }
