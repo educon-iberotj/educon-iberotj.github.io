@@ -532,6 +532,23 @@ h1 .cstrip{margin-left:10px}
 .ol-img img{max-width:100%;max-height:100%;object-fit:contain}
 .ol-b{display:flex;flex-direction:column;gap:8px;min-width:0}
 @media (max-width:620px){.card.sec.olog{flex-direction:column;align-items:flex-start}}
+.mcards{gap:0!important;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.mrow{display:grid;grid-template-columns:28px minmax(0,2.3fr) minmax(0,1.5fr) minmax(0,1fr) 100px 62px 150px;gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--line2);border-left:4px solid var(--mc)}
+.mrow:first-child{border-top:0}
+.mrow .in{padding:6px 8px;font-size:13.5px;min-height:0}
+.mrow.done{opacity:.72}
+.mrow.mr-h{border-left-color:transparent;background:var(--bg);padding:6px 12px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3)}
+.mr-n{width:26px;height:26px;border-radius:8px;background:var(--mc);color:#1b1b1b;font-weight:800;font-size:13px;display:grid;place-items:center}
+.mr-name{min-width:0}
+.mr-name .in{font-weight:600;border-color:transparent;background:transparent;padding-left:4px}
+.mr-name .in:hover,.mr-name .in:focus{border-color:var(--line);background:var(--panel)}
+.mr-d{font-size:12px;color:var(--fg2);padding-left:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mr-hoy{color:var(--ok)}
+.mr-a{display:flex;gap:2px;justify-content:flex-end}
+.ib{border:0;background:none;color:var(--fg3);font-size:13px;font-weight:700;padding:4px 6px;border-radius:6px;cursor:pointer;line-height:1}
+.ib:hover{background:var(--bg);color:var(--fg)} .ib.danger:hover{color:var(--crit)}
+.ib:disabled{opacity:.4;cursor:default}
+@media (max-width:980px){.mrow{grid-template-columns:28px 1.3fr 1fr 64px;row-gap:6px;align-items:start}.mrow.mr-h{display:none}.mr-name{grid-column:2/-1}.mrow>select:nth-of-type(1){grid-column:2/-1}.mrow>select:nth-of-type(2){grid-column:2}.mrow>select:nth-of-type(3){grid-column:3}.mrow>input.num{grid-column:4}.mr-a{grid-column:2/-1;justify-content:flex-start}}
 .mat{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;color:var(--fg2);letter-spacing:.02em}
 .asbtns{display:flex;gap:6px;flex:none}
 .asb{min-width:98px;padding:0 12px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:700;cursor:pointer;color:var(--fg2)}
@@ -1348,23 +1365,17 @@ function vGen(id) {
     <button class="btn w" data-act="copy-mods" data-id="${id}">Copiar</button><button class="btn pri w" data-act="add-mod" data-id="${id}">+ Módulo</button></div></div>
     <div class="mstats">${(() => { const conf = mods.filter(m => m.estatusProfe === 'Confirmado').length, sinP = mods.filter(m => !m.profesorId).length, nses = x.sc.all.length;
       return `<span><b>${mods.length}</b>${g.modulosPlaneados ? ` de ${g.modulosPlaneados}` : ''} módulos</span><span><b>${nses}</b> sesiones</span><span><b>${conf}</b> profesores confirmados</span>${sinP ? `<span class="warn"><b>${sinP}</b> sin profesor</span>` : ''}`; })()}</div>
-    <div class="mcards">
+    <div class="mcards">${mods.length ? '<div class="mrow mr-h"><span></span><span>Módulo</span><span>Profesor(a)</span><span>Estatus</span><span>Alta</span><span>Clases</span><span></span></div>' : ''}
     ${mods.length ? mods.map(m => { const mb = (f, t) => `data-m="${id}|${m.id}|${f}" data-t="${t || 'text'}"`; const ih = m.ses.filter(d => inhSet.has(d)); const hoy = m.ses.length && m.ses[0] <= TODAY && m.ses[m.ses.length - 1] >= TODAY; const fin = m.ses.length && m.ses[m.ses.length - 1] < TODAY;
-      return `<div class="mcard ${hoy ? 'now' : ''} ${fin ? 'done' : ''}" style="--mc:${modCol(m.idx)}">
-      <div class="mc-n">${m.idx + 1}</div>
-      <div class="mc-b">
-        <div class="mc-top"><input class="in mc-name" value="${esc(m.nombre || '')}" placeholder="Nombre del módulo" ${mb('nombre')}>${hoy ? '<span class="pill s-activo">En curso</span>' : fin ? '<span class="pill s-fin">Terminado</span>' : ''}</div>
-        <div class="mc-f">
-          <label><span>Profesor(a)</span>${sel(profOpts, m.profesorId, mb('profesorId', 'opt'))}</label>
-          <label><span>Estatus</span>${sel(EST_PROF, m.estatusProfe || 'Sin asignar', mb('estatusProfe'), false)}</label>
-          <label><span>Alta</span>${sel([['si','Sí'],['no','No']], m.alta === true ? 'si' : m.alta === false ? 'no' : '', mb('alta', 'tri'))}</label>
-          <label class="mc-cl"><span>Clases</span><input class="in num" type="number" min="0" max="80" value="${m.clases ?? ''}" ${m.auto ? '' : 'disabled title="Fechas fijas"'} ${mb('clases', 'num')}></label>
-        </div>
-        <div class="mc-d">${m.ses.length ? `<span class="mc-fe">${GI.cal}${fd(m.ses[0], false)} → ${fd(m.ses[m.ses.length - 1])}</span><span class="muted">${m.ses.length} sesiones</span>${m.auto ? '<span class="tag">auto</span>' : '<span class="tag fija">fechas fijas</span>'}${ih.length ? `<span style="color:var(--crit)">${ih.length} en día inhábil</span>` : ''}` : `<span class="muted">${!g.inicio ? 'Falta fecha de inicio' : !(g.dias||[]).length ? 'Faltan días de clase' : 'Indica el número de clases'}</span>`}</div>
-      </div>
-      <div class="mc-a"><button class="btn ghost sm w" title="Subir" aria-label="Subir" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="-1">↑</button><button class="btn ghost sm w" title="Bajar" aria-label="Bajar" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="1">↓</button>
-        ${m.auto ? (m.ses.length ? `<button class="btn ghost sm w" data-act="fix" data-id="${id}" data-m="${m.id}" title="Congelar estas fechas">Fijar</button>` : '') : `<button class="btn ghost sm w" data-act="unfix" data-id="${id}" data-m="${m.id}" title="Que las fechas se calculen solas">Auto</button>`}
-        ${m.ses.length ? `<button class="btn ghost sm" data-act="cal-pdf" data-id="${id}" data-m="${m.id}" title="Calendario de este módulo en PDF (para el profesor)">PDF</button>` : ''}<button class="btn ghost sm danger w" data-act="del-mod" data-id="${id}" data-m="${m.id}" title="Eliminar módulo" aria-label="Eliminar módulo">✕</button></div>
+      return `<div class="mrow ${hoy ? 'now' : ''} ${fin ? 'done' : ''}" style="--mc:${modCol(m.idx)}">
+      <span class="mr-n">${m.idx + 1}</span>
+      <div class="mr-name"><input class="in" value="${esc(m.nombre || '')}" placeholder="Nombre del módulo" aria-label="Nombre del módulo ${m.idx + 1}" ${mb('nombre')}>
+        <div class="mr-d">${m.ses.length ? `${fd(m.ses[0], false)} → ${fd(m.ses[m.ses.length - 1])} · ${m.ses.length} ses.${m.auto ? '' : ' · <span class="tag fija">fijas</span>'}${hoy ? ' · <b class="mr-hoy">en curso</b>' : ''}${ih.length ? ` · <span style="color:var(--crit)">${ih.length} en inhábil</span>` : ''}` : `<span class="muted">${!g.inicio ? 'Falta fecha de inicio' : !(g.dias||[]).length ? 'Faltan días de clase' : 'Indica el número de clases'}</span>`}</div></div>
+      ${sel(profOpts, m.profesorId, mb('profesorId', 'opt') + ` aria-label="Profesor del módulo ${m.idx + 1}"`)}
+      ${sel(EST_PROF, m.estatusProfe || 'Sin asignar', mb('estatusProfe') + ' aria-label="Estatus del profesor"', false)}
+      ${sel([['si','Alta: sí'],['no','Alta: no']], m.alta === true ? 'si' : m.alta === false ? 'no' : '', mb('alta', 'tri') + ' aria-label="Alta en sistema"')}
+      <input class="in num" type="number" min="0" max="80" value="${m.clases ?? ''}" title="Clases" aria-label="Clases" ${m.auto ? '' : 'disabled title="Fechas fijas"'} ${mb('clases', 'num')}>
+      <div class="mr-a"><button class="ib w" title="Subir" aria-label="Subir" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="-1">↑</button><button class="ib w" title="Bajar" aria-label="Bajar" data-act="mv" data-id="${id}" data-m="${m.id}" data-dir="1">↓</button>${m.auto ? (m.ses.length ? `<button class="ib w" data-act="fix" data-id="${id}" data-m="${m.id}" title="Fijar: congelar estas fechas" aria-label="Fijar fechas">📌</button>` : '') : `<button class="ib w" data-act="unfix" data-id="${id}" data-m="${m.id}" title="Auto: que las fechas se calculen solas" aria-label="Fechas automáticas">↻</button>`}${m.ses.length ? `<button class="ib" data-act="cal-pdf" data-id="${id}" data-m="${m.id}" title="Calendario del módulo en PDF" aria-label="PDF del módulo">PDF</button>` : ''}<button class="ib danger w" data-act="del-mod" data-id="${id}" data-m="${m.id}" title="Eliminar módulo" aria-label="Eliminar módulo">✕</button></div>
     </div>`; }).join('') : `<div class="empty card">Sin módulos todavía. Agrega uno o copia los de una generación anterior.</div>`}
     </div>
     ${x.sc.all.length ? `<details class="mses"><summary>Ver las ${x.sc.all.length} sesiones</summary><div class="chips">${x.sc.mods.flatMap(m => m.ses.map(d => `<span class="chip" style="cursor:default;background:${modCol(m.idx)};border-color:transparent;color:#1b1b1b" title="Módulo ${m.idx+1}">M${m.idx + 1} · ${fdw(d)}</span>`)).join('')}</div></details>` : ''}
