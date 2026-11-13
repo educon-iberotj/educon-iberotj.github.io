@@ -25,7 +25,7 @@ jobs:
       - name: Preparar solo la página
         run: |
           mkdir -p _site
-          cp index.html _site/
+          cp index.html calendario.html ibero-logo.png _site/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
