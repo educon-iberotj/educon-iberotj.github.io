@@ -289,6 +289,7 @@ tbody tr.click{cursor:pointer} tbody tr.click:hover{background:var(--line2)}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .muted{color:var(--fg3)} .small{font-size:13px}
 .pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;line-height:1.5}
+.stsel{font:inherit;font-size:12.5px;font-weight:600;color:var(--fg2);background:var(--line2);border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin-left:4px;cursor:pointer;vertical-align:1px}
 .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .s-activo{background:var(--ok-bg);color:var(--ok)} .s-lanz{background:var(--info-bg);color:var(--info)}
 .s-plan{background:var(--warn-bg);color:var(--warn)} .s-des{background:var(--vio-bg);color:var(--vio)}
@@ -1432,7 +1433,7 @@ function vGen(id) {
   const orgs = Object.entries(S.orgs).filter(([, o]) => (o.programas || []).includes(g.programaId) || o.todos);
   const mods = x.sc.mods;
   return `<div class="head"><div><div class="crumb"><a href="#diplomados">Diplomados</a> / ${esc(x.nombre)}</div><h1>${esc(x.nombre)} <span class="gbadge" style="font-size:16px;vertical-align:4px">Generación ${x.gen}</span>${colabStrip(g, 30)}</h1>
-    <p>${stPill(x.st)} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
+    <p>${stPill(x.st)} ${canWrite ? `<select class="stsel" title="Cambiar estatus" ${b('estatusManual', 'opt')}><option value="">${ST_MAN.includes(g.estatusManual) ? 'Volver a automático' : 'Cambiar estatus ▾'}</option>${ST_MAN.filter(v => v !== x.st || ST_MAN.includes(g.estatusManual)).map(v => `<option value="${v}" ${g.estatusManual === v ? 'selected' : ''}>${v}${g.estatusManual === v ? ' (a mano)' : ''}</option>`).join('')}</select>` : ''} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
     <div class="tools">${x.sc.all.length ? `<button class="btn" data-act="cal-pdf" data-id="${id}" title="Calendario para alumnos, listo para guardar en PDF">Calendario PDF</button>` : ''}<a class="btn" href="#pr-${g.programaId}">Ver programa</a><button class="btn danger w" data-act="del" data-col="generaciones" data-id="${id}">Eliminar generación</button></div></div>
   ${x.missing.length && !['Concluido','Pausado'].includes(x.st) ? `<div class="note"><b>Falta:</b> ${esc(x.missing.join(' · '))}</div>` : ''}
   <section class="card pad sec gtop">
