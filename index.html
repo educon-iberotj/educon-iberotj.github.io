@@ -1292,11 +1292,11 @@ function calPdf(id, mid) {
   *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact} body{font-family:Arial,Helvetica,sans-serif;color:#231f1e;margin:0;font-size:10.5px}
   .hd{display:flex;align-items:center;gap:16px;background:#231f1e;color:#fff;padding:14px 18px;border-radius:6px;border-bottom:4px solid #8A1538}
   .hd img.ib{height:36px} .hd .t{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#cccccc} .hd .h{font-size:14px;font-weight:700;margin-top:2px}
-  .hd .col{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:9px;color:#cccccc;text-align:right}
+  .hd .col{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12.5px;font-weight:700;color:#fff;text-align:right}
   .hd .col .lg{background:#fff;border-radius:5px;padding:4px 7px;display:flex;align-items:center;gap:8px} .hd .col .lg img{height:28px;max-width:110px;object-fit:contain} .hd .col .lg b{color:#231f1e;font-size:10px}
   h1{font-size:20px;margin:24px 0 4px;color:#231f1e;line-height:1.2} .sub{color:#8A1538;font-size:11.5px;font-weight:700;margin:0 0 16px}
-  .info{display:grid;grid-template-columns:repeat(4,1fr);margin:0 0 26px;border-top:2px solid #231f1e;border-bottom:1px solid #d9d9d9}
-  .info div{padding:10px 12px;border-left:1px solid #d9d9d9;line-height:1.4} .info div:first-child{border-left:0;padding-left:0} .info b{display:block;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#8A1538;margin-bottom:3px}
+  .info{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 26px}
+  .info div{padding:0 8px 8px;border-bottom:1px solid #d9d9d9;line-height:1.4} .info b{display:block;margin:0 -8px 7px;background:#231f1e;color:#fff;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;padding:5px 8px;border-radius:3px;border-bottom:2px solid #8A1538}
   h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8A1538;margin:18px 0 10px;border-bottom:1px solid #e0e0e0;padding-bottom:4px}
   .meses{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 18px}
   .mes{break-inside:avoid} .mt{font-weight:700;font-size:11px;margin-bottom:3px;color:#231f1e}
@@ -1315,13 +1315,13 @@ function calPdf(id, mid) {
   .ls td{padding:4px 8px;border-bottom:1px solid #ececec} .ls td.c{width:32px;text-align:center;color:#888888}
   .ls tr.mh td{background:#f3f3f3;font-weight:700;color:#231f1e;padding-top:6px} .ls tr.mh .sw{margin-right:6px;vertical-align:-1px}
   tr{break-inside:avoid} .nota{margin-top:8px;font-size:9.5px;color:#666666} .nota b{color:#231f1e}
-  .sc{margin-top:18px;break-inside:avoid} table.sct{width:auto;min-width:60%;border-collapse:collapse} .sct td{padding:4px 14px 4px 0;border-bottom:1px solid #eee;font-size:10px} .sct td:first-child{font-weight:700;white-space:nowrap} .sct td.w{color:#666666}
+  .sc{margin-top:40px;break-inside:avoid} table.sct{width:auto;min-width:60%;border-collapse:collapse} .sct td{padding:4px 14px 4px 0;border-bottom:1px solid #eee;font-size:10px} .sct td:first-child{font-weight:700;white-space:nowrap} .sct td.w{color:#666666}
   .pb{break-before:page}
   .pie{margin-top:24px;padding-top:6px;border-top:1px solid #e0e0e0;font-size:8.5px;color:#888888;display:flex;justify-content:space-between;gap:10px}
   .tip{background:#fff7d6;border:1px solid #f2df8f;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:12px} @media print{.tip{display:none}}
   </style></head><body>
   <div class="tip">Para guardarlo como PDF, en la ventana de impresión elige <b>"Guardar como PDF"</b> como destino y activa <b>"Gráficos de fondo"</b> si no se ven los colores.</div>
-  <div class="hd">${logo ? `<img class="ib" src="${logo}" alt="IBERO Tijuana">` : '<b>IBERO Tijuana</b>'}<div><div class="t">Educación Continua y Posgrado</div><div class="h">${uno ? 'Calendario del módulo' : 'Calendario de clases'}</div></div>
+  <div class="hd">${logo ? `<img class="ib" src="${logo}" alt="IBERO Tijuana">` : '<b>IBERO Tijuana</b>'}<div><div class="t">Educación Continua</div><div class="h">${uno ? 'Calendario del módulo' : 'Calendario de clases'}</div></div>
     ${colabs.length ? `<div class="col"><span>En colaboración con</span>${colabs.map(([, o]) => `<span class="lg">${o.logo ? `<img src="${o.logo}" alt="${esc(o.nombre)}">` : ''}<b>${esc(o.nombre)}</b></span>`).join('')}</div>` : ''}</div>
   <h1>${esc(uno ? `Módulo ${m0.idx + 1}: ${m0.nombre || 'Sin nombre'}` : x.nombre)}</h1>
   <p class="sub">${uno ? esc(x.nombre) + ' · ' : ''}Generación ${x.gen} · ${horas ? hTxt(horas) + ' · ' : ''}${esc(g.modalidad === 'En línea' ? 'En línea' : (g.modalidad || 'Presencial'))}</p>
