@@ -1563,9 +1563,9 @@ function vPrograma(id) {
     ${fld('Notas', `<textarea class="in" ${b('notas')}>${esc(p.notas || '')}</textarea>`, true)}
   </div></section>
   <section class="card pad sec"><h2>Organizaciones afines (${orgs.length})</h2><div class="chips">${orgs.map(([oid, o]) => `<a class="chip" href="#o-${oid}">${esc(o.nombre)}</a>`).join('') || '<span class="muted small">Ninguna</span>'}</div></section></div>
-  <section class="sec"><h2>Generaciones</h2><div class="card tbl-w"><table><thead><tr><th>Generación</th><th>Estatus</th><th>Fechas</th><th>Sede</th><th>Módulos</th><th>Preparación</th></tr></thead><tbody>
-  ${gs.map(x => `<tr class="click" data-go="d-${x.id}"><td><b>Gen ${x.gen}</b> <span class="small muted">${esc(x.g.etiqueta || '')}</span></td><td>${stPill(x.st)}</td><td class="num small">${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : '—'}</td><td class="small">${esc(x.g.sede || x.g.modalidad || '')}</td><td class="num">${(x.g.modulos || []).length}</td><td>${prepCell(x)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Sin generaciones.</td></tr>'}
-  </tbody></table></div></section>`;
+  <section class="sec"><h2>Generaciones</h2><div class="card tbl-w"><table><thead><tr><th>Generación</th><th>Estatus</th><th>Fechas</th><th>Sede</th><th>Módulos</th><th>Inscritos</th><th>Preparación</th></tr></thead><tbody>
+  ${gs.map(x => `<tr class="click" data-go="d-${x.id}"><td><b>Gen ${x.gen}</b> <span class="small muted">${esc(x.g.etiqueta || '')}</span></td><td>${stPill(x.st)}</td><td class="num small">${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : '—'}</td><td class="small">${esc(x.g.sede || x.g.modalidad || '')}</td><td class="num">${(x.g.modulos || []).length}</td><td style="min-width:150px">${insCell(x)}</td><td>${prepCell(x)}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Sin generaciones.</td></tr>'}
+  </tbody>${gs.length > 1 ? `<tfoot><tr><td colspan="5" class="small muted" style="text-align:right">Total de inscritos en todas las generaciones</td><td><b>${gs.reduce((a, x) => a + (insDe(x) || 0), 0)}</b></td><td></td></tr></tfoot>` : ''}</table></div></section>`;
 }
 
 function vVinc() {
