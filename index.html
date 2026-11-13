@@ -293,7 +293,7 @@ tbody tr.click{cursor:pointer} tbody tr.click:hover{background:var(--line2)}
 .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .s-activo{background:var(--ok-bg);color:var(--ok)} .s-lanz{background:var(--info-bg);color:var(--info)}
 .s-plan{background:var(--warn-bg);color:var(--warn)} .s-des{background:var(--vio-bg);color:var(--vio)}
-.s-fin{background:var(--mute-bg);color:var(--fg2)} .s-pausa{background:var(--mute-bg);color:var(--fg3)}
+.s-fin{background:var(--mute-bg);color:var(--fg2)} .s-pausa{background:var(--mute-bg);color:var(--fg3)} .s-cancel{background:var(--mute-bg);color:var(--fg3);text-decoration:line-through}
 .a-urg{background:var(--crit-bg);color:var(--crit)} .a-aten{background:var(--warn-bg);color:var(--warn)} .a-ok{background:var(--ok-bg);color:var(--ok)} .a-tiempo{background:var(--info-bg);color:var(--info)}
 .bar{height:6px;background:var(--line2);border-radius:3px;overflow:hidden;min-width:70px}
 .bar i{display:block;height:100%;background:var(--rojo);border-radius:3px}
@@ -804,11 +804,12 @@ function schedule(g) {
   const all = mods.flatMap(m => m.ses).sort();
   return { mods, all, inicio: all[0] || g.inicio || null, fin: all.length ? all[all.length - 1] : (g.finManual || null) };
 }
-const ST_MAN = ['En desarrollo','En planeación','En lanzamiento','Activo'];
+const ST_MAN = ['En desarrollo','En planeación','En lanzamiento','Activo','Pausado','Cancelado'];
 function statusOf(g, sc) {
   const p = S.programas[g.programaId] || {};
   const ini = sc.inicio, fin = sc.fin;
   const started = ini && ini <= TODAY;
+  if (['Pausado','Cancelado'].includes(g.estatusManual)) return g.estatusManual;
   if (g.pausada || (p.oferta === 'Pausado' && !started)) return 'Pausado';
   if (ST_MAN.includes(g.estatusManual) && !(fin && TODAY > fin)) return g.estatusManual;
   if (!ini) return p.oferta === 'En diseño' ? 'En desarrollo' : 'En planeación';
@@ -816,7 +817,7 @@ function statusOf(g, sc) {
   if (fin && TODAY > fin) return 'Concluido';
   return 'Activo';
 }
-const ST_CLS = { 'Activo':'s-activo','En lanzamiento':'s-lanz','En planeación':'s-plan','En desarrollo':'s-des','Concluido':'s-fin','Pausado':'s-pausa' };
+const ST_CLS = { 'Activo':'s-activo','En lanzamiento':'s-lanz','En planeación':'s-plan','En desarrollo':'s-des','Concluido':'s-fin','Pausado':'s-pausa','Cancelado':'s-cancel' };
 const pill = (t, c) => `<span class="pill ${c}">${esc(t)}</span>`;
 const stPill = s => pill(s, ST_CLS[s] || 's-fin');
 
@@ -838,7 +839,7 @@ function derive() {
     const prep = (checks.filter(c => c[1]).length + (plan ? Math.min(1, conf / plan) + Math.min(1, altas / plan) : 0)) / 8;
     const dpi = sc.inicio && sc.inicio > TODAY ? daysBetween(TODAY, sc.inicio) : null;
     let aten = '—';
-    if (!['En desarrollo','Pausado','Concluido','Activo'].includes(st)) aten = prep >= 1 ? 'En orden' : dpi != null && dpi <= 30 ? 'Urgente' : dpi != null && dpi <= 60 ? 'Atención' : 'En tiempo';
+    if (!['En desarrollo','Pausado','Cancelado','Concluido','Activo'].includes(st)) aten = prep >= 1 ? 'En orden' : dpi != null && dpi <= 30 ? 'Urgente' : dpi != null && dpi <= 60 ? 'Atención' : 'En tiempo';
     if (st === 'Activo') aten = missing.some(x => /profes/.test(x)) ? 'Atención' : 'En orden';
     const p = S.programas[g.programaId] || { nombre:'(programa eliminado)' };
     return { id, g, sc, st, eq, horas, horasFuente, hc, plan, conf, altas, prep, missing, dpi, aten, p, nombre: p.nombre, label: `${p.nombre} · ${g.etiqueta || ''}` };
@@ -1023,7 +1024,7 @@ function insCell(x, wide) {
 function atiende() {
   const A = []; const in21 = addDays(TODAY, 21), in30 = addDays(TODAY, 30), hace30 = addDays(TODAY, -30);
   for (const x of D.gens) {
-    if (['Concluido','Pausado','En desarrollo'].includes(x.st)) continue;
+    if (['Concluido','Pausado','Cancelado','En desarrollo'].includes(x.st)) continue;
     for (const m of x.sc.mods) {
       if (!m.ses.length || m.ses[0] > in21 || m.ses[m.ses.length - 1] < TODAY) continue;
       const empieza = m.ses[0] >= TODAY;
@@ -1067,7 +1068,7 @@ function vTablero() {
   // línea de tiempo 6 meses
   const t0 = TODAY.slice(0, 8) + '01', t1 = addMonths(t0, 6); const span = daysBetween(t0, t1);
   const meses = []; for (let i = 0; i < 6; i++) { const m = addMonths(t0, i); meses.push(MES[pd(m).getMonth()] + (pd(m).getMonth() === 0 ? ' ' + m.slice(2, 4) : '')); }
-  const tl = G.filter(x => x.sc.inicio && x.sc.fin && x.sc.inicio < t1 && x.sc.fin >= t0 && x.st !== 'Pausado').sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
+  const tl = G.filter(x => x.sc.inicio && x.sc.fin && x.sc.inicio < t1 && x.sc.fin >= t0 && !['Pausado','Cancelado'].includes(x.st)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
   const nowPct = daysBetween(t0, TODAY) / span * 100;
   const gantt = tl.map(x => { const a = x.sc.inicio < t0 ? t0 : x.sc.inicio, b = x.sc.fin >= t1 ? addDays(t1, -1) : x.sc.fin; const l = daysBetween(t0, a) / span * 100, w = Math.max(.8, (daysBetween(a, b) + 1) / span * 100);
     return `<div class="gl"><a href="#d-${x.id}">${esc(x.nombre)}</a> <span class="muted small">Gen ${x.gen}</span></div><div class="gt g6"><span class="now" style="left:${nowPct}%"></span><span class="gb" style="left:${l}%;width:${w}%;background:${D.col[x.g.programaId]}" title="${esc(x.label)}: ${fd(x.sc.inicio)} → ${fd(x.sc.fin)}${x.sc.finEst ? ' (fin estimado)' : ''}">${x.sc.inicio >= t0 ? `<em>${fd(x.sc.inicio, false)}</em>` : ''}</span></div>`; }).join('');
@@ -1152,7 +1153,7 @@ function newGenForm() {
 }
 
 function vDiplomados() {
-  const tabs = [['activos','Activos', x => x.st === 'Activo'], ['proximos','Próximos', x => ['En lanzamiento','En planeación'].includes(x.st)], ['desarrollo','En desarrollo', x => x.st === 'En desarrollo'], ['concluidos','Concluidos', x => x.st === 'Concluido'], ['pausados','Pausados', x => x.st === 'Pausado'], ['todos','Todos', () => true]];
+  const tabs = [['activos','Activos', x => x.st === 'Activo'], ['proximos','Próximos', x => ['En lanzamiento','En planeación'].includes(x.st)], ['desarrollo','En desarrollo', x => x.st === 'En desarrollo'], ['concluidos','Concluidos', x => x.st === 'Concluido'], ['pausados','Pausados', x => x.st === 'Pausado'], ['cancelados','Cancelados', x => x.st === 'Cancelado'], ['todos','Todos', () => true]];
   const t = tabs.find(t => t[0] === ui.genTab) || tabs[0];
   const q = norm(ui.q);
   const L0 = D.gens.filter(t[2]).filter(x => !q || norm(x.label + ' ' + (x.g.sede || '') + ' ' + areaOf(x)).includes(q));
@@ -1435,7 +1436,7 @@ function vGen(id) {
   return `<div class="head"><div><div class="crumb"><a href="#diplomados">Diplomados</a> / ${esc(x.nombre)}</div><h1>${esc(x.nombre)} <span class="gbadge" style="font-size:16px;vertical-align:4px">Generación ${x.gen}</span>${colabStrip(g, 30)}</h1>
     <p>${stPill(x.st)} ${canWrite ? `<select class="stsel" title="Cambiar estatus" ${b('estatusManual', 'opt')}><option value="">${ST_MAN.includes(g.estatusManual) ? 'Volver a automático' : 'Cambiar estatus ▾'}</option>${ST_MAN.filter(v => v !== x.st || ST_MAN.includes(g.estatusManual)).map(v => `<option value="${v}" ${g.estatusManual === v ? 'selected' : ''}>${v}${g.estatusManual === v ? ' (a mano)' : ''}</option>`).join('')}</select>` : ''} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
     <div class="tools">${x.sc.all.length ? `<button class="btn" data-act="cal-pdf" data-id="${id}" title="Calendario para alumnos, listo para guardar en PDF">Calendario PDF</button>` : ''}<a class="btn" href="#pr-${g.programaId}">Ver programa</a><button class="btn danger w" data-act="del" data-col="generaciones" data-id="${id}">Eliminar generación</button></div></div>
-  ${x.missing.length && !['Concluido','Pausado'].includes(x.st) ? `<div class="note"><b>Falta:</b> ${esc(x.missing.join(' · '))}</div>` : ''}
+  ${x.missing.length && !['Concluido','Pausado','Cancelado'].includes(x.st) ? `<div class="note"><b>Falta:</b> ${esc(x.missing.join(' · '))}</div>` : ''}
   <section class="card pad sec gtop">
     <div class="gt-c"><div class="gt-h">Colaboración</div>
       <div class="cpick">${colabsDe(g).map(([oid, o]) => `<span class="cchip">${logoImg(o, 26)}<a href="#o-${oid}">${esc(o.nombre)}</a>${canWrite ? `<button class="cx w" data-act="colab-del" data-id="${id}" data-o="${oid}" title="Quitar" aria-label="Quitar ${esc(o.nombre)}">×</button>` : ''}</span>`).join('') || '<span class="muted small">Sin colaboradores.</span>'}</div>
@@ -1464,7 +1465,6 @@ function vGen(id) {
       ${fld('Módulos planeados', sel([...Array(12)].map((_, k) => [String(k + 1), `${k + 1} módulo${k ? 's' : ''}`]), g.modulosPlaneados != null ? String(g.modulosPlaneados) : '', b('modulosPlaneados', 'num')))}
       ${fld('Días sin clase solo para este grupo', `<input class="in" value="${esc((g.excluir || []).join(', '))}" placeholder="2027-02-23, 2027-03-02" ${b('excluir', 'dates')}>`)}
       ${fld(`Estatus <span class="muted">(${ST_MAN.includes(g.estatusManual) ? 'fijado a mano' : 'automático: ' + esc(x.st)})</span>`, `<select class="in" ${b('estatusManual', 'opt')}><option value="">Automático (según fechas)</option>${ST_MAN.map(v => `<option value="${v}" ${g.estatusManual === v ? 'selected' : ''}>${v}</option>`).join('')}</select>`)}
-      <div class="f" style="justify-content:flex-end"><label style="display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px;color:var(--fg)"><input type="checkbox" ${g.pausada ? 'checked' : ''} ${b('pausada', 'bool')}> Generación en pausa</label></div>
       ${fld('Notas', `<textarea class="in" ${b('notas')}>${esc(g.notas || '')}</textarea>`, true)}
     </div>
   </section>
@@ -1528,7 +1528,7 @@ function vCalendario() {
   const lugarDe = x => x.g.modalidad === 'En línea' || x.g.sede === 'En línea' ? 'En línea' : (x.g.sede || 'Sin sede');
   const salonDe = x => lugarDe(x) === 'En línea' ? 'En línea' : `${(x.g.sede || 'Sin sede').replace('Campus ', '')} · ${x.g.salon || 'sin salón'}`;
   const grupoDe = x => vista === 'sede' ? lugarDe(x) : vista === 'salon' ? salonDe(x) : '';
-  const gruposVis = vista === 'general' ? [] : [...new Set(D.gens.filter(x => x.sc.all.length && (x.sc.fin || '') >= `${ui.calMes}-01` && (x.sc.inicio || '') <= `${ui.calMes}-31`).map(grupoDe))].sort();
+  const gruposVis = vista === 'general' ? [] : [...new Set(D.gens.filter(x => x.sc.all.length && x.st !== 'Cancelado' && (x.sc.fin || '') >= `${ui.calMes}-01` && (x.sc.inicio || '') <= `${ui.calMes}-31`).map(grupoDe))].sort();
   const PAL_L = ['#E5202E','#2F6FB0','#2E8B57','#C77700','#7B3FA0','#0F8C8C','#A0522D','#5A6B7B'];
   const colGrupo = gname => PAL_L[[...new Set(D.gens.map(grupoDe))].sort().indexOf(gname) % PAL_L.length];
   const selG = vista !== 'general' && gruposVis.includes(ui.calGrupo) ? ui.calGrupo : '';
@@ -1541,7 +1541,7 @@ function vCalendario() {
   const agenda = monthDays.filter(d => (D.byDay.get(d) || []).some(filt) || (inhSet.get(d) && inhSet.get(d) !== 'Descanso')).map(d => `<div class="li"><div class="when">${fdw(d)}</div><div class="small" style="min-width:0">${inhSet.get(d) ? `<div class="muted">${esc(inhSet.get(d))}</div>` : ''}${(D.byDay.get(d) || []).filter(filt).map(s => `<div><a href="#d-${s.gid}"><span class="swatch" style="display:inline-block;margin:0 6px 0 0;background:${evCol(s)}"></span>${esc(s.x.nombre)}</a> · M${s.m.idx + 1}${s.conf ? ' <b style="color:var(--crit)">choque</b>' : ''}</div>`).join('')}</div></div>`).join('');
   // gantt anual
   const yr = y; const y0 = `${yr}-01-01`, y1 = `${yr}-12-31`; const span = daysBetween(y0, y1) + 1;
-  const rows = D.gens.filter(x => x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg) && (!selG || grupoDe(x) === selG)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
+  const rows = D.gens.filter(x => x.st !== 'Cancelado' && x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg) && (!selG || grupoDe(x) === selG)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
   const nowPct = TODAY.slice(0, 4) == yr ? daysBetween(y0, TODAY) / span * 100 : null;
   const gantt = rows.map(x => { const a = x.sc.inicio < y0 ? y0 : x.sc.inicio, b = x.sc.fin > y1 ? y1 : x.sc.fin; const l = daysBetween(y0, a) / span * 100, w = (daysBetween(a, b) + 1) / span * 100;
     return `<div class="gl"><a href="#d-${x.id}">${esc(x.nombre)}</a> <span class="muted small">Gen ${x.gen}</span></div><div class="gt">${nowPct != null ? `<span class="now" style="left:${nowPct}%"></span>` : ''}<span class="gb" style="left:${l}%;width:${w}%;background:${D.col[x.g.programaId]}" title="${esc(x.label)}: ${fd(x.sc.inicio)} → ${fd(x.sc.fin)}"></span></div>`; }).join('');
@@ -1803,7 +1803,7 @@ function vTarea(id) {
   const t = S.tareas[id]; if (!t) return `<div class="empty">Este pendiente ya no existe. <a href="#pendientes">Volver</a></div>`;
   const b = (f, ty) => B('tareas', id, f, ty); const ck = t.checklist || [];
   const v = t.vinculo || {};
-  const vOpts = [['', 'Ninguno'], ...D.gens.filter(x => !['Concluido'].includes(x.st)).sort((a, b) => a.label.localeCompare(b.label)).map(x => ['gen:' + x.id, 'Diplomado · ' + x.label]),
+  const vOpts = [['', 'Ninguno'], ...D.gens.filter(x => !['Concluido','Cancelado'].includes(x.st)).sort((a, b) => a.label.localeCompare(b.label)).map(x => ['gen:' + x.id, 'Diplomado · ' + x.label]),
     ...Object.entries(S.orgs).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre)).map(([k, o]) => ['org:' + k, 'Vinculación · ' + o.nombre]),
     ...Object.entries(S.profes).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre)).map(([k, p]) => ['prof:' + k, 'Profesor · ' + p.nombre])];
   const cur = v.id ? v.tipo + ':' + v.id : ''; const l = tLink(t);
