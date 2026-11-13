@@ -1012,6 +1012,7 @@ function ingreso(x) {
 function insCell(x, wide) {
   const ins = insDe(x), meta = Number(x.g.meta) || 0;
   if (!ins && !meta) return '<span class="muted small">Sin capturar</span>';
+  if (x.st === 'Concluido') return ins ? `<span class="num small"><b>${ins}</b> inscrito${ins === 1 ? '' : 's'}</span>` : '<span class="muted small">Sin capturar</span>';
   const p = meta ? Math.min(100, Math.round(ins / meta * 100)) : 0;
   const cls = !meta ? '' : ins >= meta ? 'ok' : p >= 60 ? 'mid' : 'low';
   return `<div class="ins ${cls}" style="${wide ? 'min-width:150px' : ''}"><div class="ibar"><i style="width:${meta ? p : 0}%"></i></div><span class="num small"><b>${ins}</b>${meta ? ` / ${meta}` : ' inscritos'}</span></div>`;
