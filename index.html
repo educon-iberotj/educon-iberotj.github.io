@@ -731,6 +731,7 @@ const PRECIOS_BASE = { esquemas:[
   { id:'cursos', nombre:'Cursos IBERO', tipo:'Curso', base:9900, meses:2, opciones:[ { nombre:'Pago de contado', desc:25, pagos:1 }, { nombre:'Egresado IBERO', desc:30, pagos:1 }, { nombre:'Promoción', desc:20, pagos:2 } ] } ] };
 const esquemas = () => ((S.precios && S.precios.esquemas) || PRECIOS_BASE.esquemas);
 function esqAuto(pid, p) { if (p && p.esquemaPrecio) return p.esquemaPrecio; if (['alta-direccion','gestion-financiera'].includes(pid)) return 'coparmex'; if (!p) return null; return p.tipo === 'Curso' ? 'cursos' : p.tipo === 'Diplomado' ? 'diplomados' : null; }
+const opsOrd = e => [...((e && e.opciones) || [])].sort((a, b) => (Number(a.desc) || 0) - (Number(b.desc) || 0));
 function esqDe(g, p) { const id = g.esquemaPrecio || esqAuto(g.programaId, p);
   if (id === 'ninguno') { const c = Number(g.costoInscripcion) || 0; if (!c) return null;
     const src = esquemas().find(e => e.id === (g.descuentosDe || 'diplomados')) || esquemas().find(e => e.porHora == null) || {};
@@ -756,7 +757,7 @@ const addMonths = (s, n) => { const d = pd(s); const day = d.getDate(); d.setMon
 const r2 = n => Math.round(n * 100) / 100;
 function priceTable(e) {
   if (!e) return '';
-  const rows = [{ nombre:'Precio de lista', desc:0, pagos:Number(e.pagosLista) || 1 }, ...(e.opciones || [])];
+  const rows = [{ nombre:'Precio de lista', desc:0, pagos:Number(e.pagosLista) || 1 }, ...opsOrd(e)];
   return `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th></tr></thead><tbody>${rows.map((o, i) => { const tot = r2(e.base * (1 - (Number(o.desc) || 0) / 100)); const n = Number(o.pagos) || 1;
     return `<tr${i === 0 ? ' class="plist"' : ''}><td>${esc(o.nombre)}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${n > 1 ? `${n} pagos de <b>${money(r2(tot / n))}</b>` : 'Un solo pago'}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
@@ -1409,7 +1410,7 @@ function vGen(id) {
         <div><span class="lbl">Cobrado ${ig.cobManual ? '(según CRM)' : '(estimado)'}</span><b style="color:var(--ok)">${money(ig.cobrado)}</b><small>${ig.cobManual ? 'capturado a mano' : 'contado completo + parcialidades vencidas'}</small></div>
         <div><span class="lbl">Por cobrar</span><b>${money(ig.porCobrar)}</b><div class="ins ok"><div class="ibar"><i style="width:${p}%"></i></div><span class="num small">${p}% cobrado</span></div></div></div>
         ${ig.est ? '<div class="note small">Para que el cálculo salga exacto, reparte los inscritos por forma de pago abajo; los que no repartas se calculan con el promedio de las opciones.</div>' : ''}`; })()}
-    ${x.eq ? `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th><th>Inscritos</th></tr></thead><tbody>${[{ nombre:'Precio de lista', desc:0, pagos:Number(x.eq.pagosLista) || 1 }, ...(x.eq.opciones || [])].map(o => { const tot = r2(x.eq.base * (1 - (Number(o.desc) || 0) / 100)); const n = Number(o.pagos) || 1; return `<tr><td>${esc(o.nombre)}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${n > 1 ? `${n} pagos de <b>${money(r2(tot / n))}</b>` : 'Un solo pago'}</td><td style="width:90px"><input class="in num" type="number" min="0" value="${(g.inscritosPorOpcion || {})[o.nombre] ?? ''}" data-io="${id}|${esc(o.nombre)}" aria-label="Inscritos con ${esc(o.nombre)}"></td></tr>`; }).join('')}</tbody></table></div>` : ''}
+    ${x.eq ? `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th><th>Inscritos</th></tr></thead><tbody>${[{ nombre:'Precio de lista', desc:0, pagos:Number(x.eq.pagosLista) || 1 }, ...opsOrd(x.eq)].map(o => { const tot = r2(x.eq.base * (1 - (Number(o.desc) || 0) / 100)); const n = Number(o.pagos) || 1; return `<tr><td>${esc(o.nombre)}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${n > 1 ? `${n} pagos de <b>${money(r2(tot / n))}</b>` : 'Un solo pago'}</td><td style="width:90px"><input class="in num" type="number" min="0" value="${(g.inscritosPorOpcion || {})[o.nombre] ?? ''}" data-io="${id}|${esc(o.nombre)}" aria-label="Inscritos con ${esc(o.nombre)}"></td></tr>`; }).join('')}</tbody></table></div>` : ''}
   </section>
   ${linkedTasks('gen', id)}
   <section class="card pad sec"><div class="sec-h"><h2>Organizaciones afines</h2><span class="small muted">${orgs.length} en el directorio de vinculación</span></div>
@@ -1919,7 +1920,7 @@ function vAlumno(id) {
   const fis = a.fiscal || {}; const fb = f => `data-fis="${id}|${f}"`;
   const marcas = Object.entries(D.asisByGen[a.generacionId] || {}).sort((p, q) => q[0].localeCompare(p[0]));
   const verCob = ROL !== 'asistencia';
-  const eq = x?.eq; const opts = eq ? [{ nombre:'Precio de lista', desc:0, pagos:Number(eq.pagosLista) || 1 }, ...(eq.opciones || [])] : [];
+  const eq = x?.eq; const opts = eq ? [{ nombre:'Precio de lista', desc:0, pagos:Number(eq.pagosLista) || 1 }, ...opsOrd(eq)] : [];
   return `<div class="head"><div><div class="crumb"><a href="#alumnos">Alumnos</a> / ${esc(nombreAl(a))}</div><h1>${esc(nombreAl(a))}</h1>
     <p>${matDe(a) ? `<span class="mat">${esc(matDe(a))}</span> · ` : ''}${x ? `<a href="#d-${x.id}">${esc(x.label)}</a>` : 'Sin grupo'} · ${verCob ? pill(c.estado, COB_CLS[c.estado]) + ' · ' : ''}asistencia ${pctTxt(s.pct)}</p></div>
     <div class="tools">${ed ? `<button class="btn danger w" data-act="del" data-col="alumnos" data-id="${id}">Eliminar</button>` : ''}</div></div>
