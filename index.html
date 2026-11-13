@@ -1269,7 +1269,7 @@ function calPdf(id, mid) {
   const sinClase = [];
   for (let d = ini; d <= fin; d = addDays(d, 1)) { const w = pd(d).getDay(); if (!dias.includes(w)) continue; const why = inhSet.get(d); if (why && why !== 'Descanso') sinClase.push([d, why]); else if ((g.excluir || []).includes(d)) sinClase.push([d, 'Sin clase para este grupo']); }
   const uno = !!mid; const m0 = mods[0];
-  const PAL = [['#8A1538','#fff'],['#5B5552','#fff'],['#C27C8E','#231f1e'],['#A0673A','#fff'],['#2F2B2A','#fff'],['#D9B3BC','#231f1e'],['#8E8784','#fff'],['#E0C29F','#231f1e'],['#6E1A30','#fff'],['#BDB5B1','#231f1e'],['#B5543E','#fff'],['#E9DCD6','#231f1e']];
+  const PAL = [['#8A1538','#fff'],['#1F4FB4','#fff'],['#B8902F','#fff'],['#5B2C83','#fff'],['#4A4A4A','#fff'],['#1B2A4A','#fff'],['#A7ABB0','#1a1a1a'],['#1A1A1A','#fff'],['#2E6F95','#fff'],['#7A5C1E','#fff'],['#8C8C8C','#fff'],['#3E1A5C','#fff']];
   const colDe = {}; mods.forEach((m, k) => { m.ses.forEach(d => { colDe[d] = [PAL[(uno ? m.idx : k) % PAL.length], m]; }); });
   // meses
   const meses = []; for (let y = +ini.slice(0, 4), mo = +ini.slice(5, 7); `${y}-${String(mo).padStart(2, '0')}` <= fin.slice(0, 7); mo === 12 ? (y++, mo = 1) : mo++) meses.push([y, mo]);
@@ -1291,33 +1291,33 @@ function calPdf(id, mid) {
   @page{size:letter;margin:12mm 13mm 14mm}
   *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact} body{font-family:Arial,Helvetica,sans-serif;color:#231f1e;margin:0;font-size:10.5px}
   .hd{display:flex;align-items:center;gap:16px;background:#231f1e;color:#fff;padding:14px 18px;border-radius:6px;border-bottom:4px solid #8A1538}
-  .hd img.ib{height:36px} .hd .t{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#cfc7c4} .hd .h{font-size:14px;font-weight:700;margin-top:2px}
-  .hd .col{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:9px;color:#cfc7c4;text-align:right}
+  .hd img.ib{height:36px} .hd .t{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#cccccc} .hd .h{font-size:14px;font-weight:700;margin-top:2px}
+  .hd .col{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:9px;color:#cccccc;text-align:right}
   .hd .col .lg{background:#fff;border-radius:5px;padding:4px 7px;display:flex;align-items:center;gap:8px} .hd .col .lg img{height:28px;max-width:110px;object-fit:contain} .hd .col .lg b{color:#231f1e;font-size:10px}
   h1{font-size:20px;margin:24px 0 4px;color:#231f1e;line-height:1.2} .sub{color:#8A1538;font-size:11.5px;font-weight:700;margin:0 0 16px}
   .info{display:grid;grid-template-columns:repeat(4,1fr);margin:0 0 26px;border-top:2px solid #231f1e;border-bottom:1px solid #d9d9d9}
   .info div{padding:10px 12px;border-left:1px solid #d9d9d9;line-height:1.4} .info div:first-child{border-left:0;padding-left:0} .info b{display:block;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#8A1538;margin-bottom:3px}
-  h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8A1538;margin:18px 0 10px;border-bottom:1px solid #e6dedc;padding-bottom:4px}
+  h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8A1538;margin:18px 0 10px;border-bottom:1px solid #e0e0e0;padding-bottom:4px}
   .meses{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 18px}
   .mes{break-inside:avoid} .mt{font-weight:700;font-size:11px;margin-bottom:3px;color:#231f1e}
-  .mg{width:100%;border-collapse:collapse;table-layout:fixed} .mg th{font-size:8px;color:#8a7f7d;font-weight:700;padding:2px 0;text-align:center}
+  .mg{width:100%;border-collapse:collapse;table-layout:fixed} .mg th{font-size:8px;color:#888888;font-weight:700;padding:2px 0;text-align:center}
   .mg td{text-align:center;padding:2px 0;font-size:9.5px;height:22px} .mg td span{display:inline-block;width:21px;height:19px;line-height:19px;border-radius:4px}
-  .mg td.dom span{color:#bcb3b0} .mg td.inh span{background:repeating-linear-gradient(45deg,#e4dedc 0 3px,#f4f0ef 3px 6px);color:#8a7f7d}
+  .mg td.dom span{color:#b5b5b5} .mg td.inh span{background:repeating-linear-gradient(45deg,#d6d6d6 0 3px,#f3f3f3 3px 6px);color:#888888}
   .mg .dc{font-weight:700}
   .leyenda{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-top:14px}
-  .ly{display:flex;gap:8px;align-items:flex-start;font-size:10px;break-inside:avoid} .lyd{color:#6b6260;font-size:9px;margin-top:1px}
+  .ly{display:flex;gap:8px;align-items:flex-start;font-size:10px;break-inside:avoid} .lyd{color:#666666;font-size:9px;margin-top:1px}
   .sw{display:inline-block;width:12px;height:12px;border-radius:3px;flex:none;margin-top:1px}
-  .simb{display:flex;gap:16px;font-size:9px;color:#6b6260;margin-top:16px} .simb span{display:inline-flex;align-items:center;gap:5px}
-  .simb i{display:inline-block;width:14px;height:11px;border-radius:3px;background:repeating-linear-gradient(45deg,#e4dedc 0 3px,#f4f0ef 3px 6px)}
+  .simb{display:flex;gap:16px;font-size:9px;color:#666666;margin-top:16px} .simb span{display:inline-flex;align-items:center;gap:5px}
+  .simb i{display:inline-block;width:14px;height:11px;border-radius:3px;background:repeating-linear-gradient(45deg,#d6d6d6 0 3px,#f3f3f3 3px 6px)}
   .pol{margin-top:22px;padding:10px 14px;border-left:4px solid #8A1538;background:#f3f3f3;border-radius:0 6px 6px 0;font-size:10px}
   .pol b{color:#8A1538}
   table.ls{width:100%;border-collapse:collapse} .ls th{background:#231f1e;color:#fff;text-align:left;padding:5px 8px;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase}
-  .ls td{padding:4px 8px;border-bottom:1px solid #eee7e5} .ls td.c{width:32px;text-align:center;color:#8a7f7d}
+  .ls td{padding:4px 8px;border-bottom:1px solid #ececec} .ls td.c{width:32px;text-align:center;color:#888888}
   .ls tr.mh td{background:#f3f3f3;font-weight:700;color:#231f1e;padding-top:6px} .ls tr.mh .sw{margin-right:6px;vertical-align:-1px}
-  tr{break-inside:avoid} .nota{margin-top:8px;font-size:9.5px;color:#6b6260} .nota b{color:#231f1e}
-  .sc{margin-top:18px;break-inside:avoid} table.sct{width:auto;min-width:60%;border-collapse:collapse} .sct td{padding:4px 14px 4px 0;border-bottom:1px solid #eee;font-size:10px} .sct td:first-child{font-weight:700;white-space:nowrap} .sct td.w{color:#6b6260}
+  tr{break-inside:avoid} .nota{margin-top:8px;font-size:9.5px;color:#666666} .nota b{color:#231f1e}
+  .sc{margin-top:18px;break-inside:avoid} table.sct{width:auto;min-width:60%;border-collapse:collapse} .sct td{padding:4px 14px 4px 0;border-bottom:1px solid #eee;font-size:10px} .sct td:first-child{font-weight:700;white-space:nowrap} .sct td.w{color:#666666}
   .pb{break-before:page}
-  .pie{margin-top:24px;padding-top:6px;border-top:1px solid #e6dedc;font-size:8.5px;color:#8a7f7d;display:flex;justify-content:space-between;gap:10px}
+  .pie{margin-top:24px;padding-top:6px;border-top:1px solid #e0e0e0;font-size:8.5px;color:#888888;display:flex;justify-content:space-between;gap:10px}
   .tip{background:#fff7d6;border:1px solid #f2df8f;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:12px} @media print{.tip{display:none}}
   </style></head><body>
   <div class="tip">Para guardarlo como PDF, en la ventana de impresión elige <b>"Guardar como PDF"</b> como destino y activa <b>"Gráficos de fondo"</b> si no se ven los colores.</div>
