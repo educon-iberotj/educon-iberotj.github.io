@@ -731,7 +731,12 @@ const PRECIOS_BASE = { esquemas:[
   { id:'cursos', nombre:'Cursos IBERO', tipo:'Curso', base:9900, meses:2, opciones:[ { nombre:'Pago de contado', desc:25, pagos:1 }, { nombre:'Egresado IBERO', desc:30, pagos:1 }, { nombre:'Promoción', desc:20, pagos:2 } ] } ] };
 const esquemas = () => ((S.precios && S.precios.esquemas) || PRECIOS_BASE.esquemas);
 function esqAuto(pid, p) { if (p && p.esquemaPrecio) return p.esquemaPrecio; if (['alta-direccion','gestion-financiera'].includes(pid)) return 'coparmex'; if (!p) return null; return p.tipo === 'Curso' ? 'cursos' : p.tipo === 'Diplomado' ? 'diplomados' : null; }
-function esqDe(g, p) { const id = g.esquemaPrecio || esqAuto(g.programaId, p); if (!id || id === 'ninguno') return null; return esquemas().find(e => e.id === id) || null; }
+function esqDe(g, p) { const id = g.esquemaPrecio || esqAuto(g.programaId, p);
+  if (id === 'ninguno') { const c = Number(g.costoInscripcion) || 0; if (!c) return null;
+    const src = esquemas().find(e => e.id === (g.descuentosDe || 'diplomados')) || esquemas().find(e => e.porHora == null) || {};
+    const sin = g.descuentosDe === 'ninguno';
+    return { id:'manual', manual:true, nombre:'Precio manual', base:c, meses:src.meses || 5, pagosLista:sin ? (Number(g.parcialidades) || 1) : (Number(g.parcialidades) || src.pagosLista || 1), opciones:sin ? [] : (src.opciones || []), fuente:sin ? '' : src.nombre }; }
+  if (!id) return null; return esquemas().find(e => e.id === id) || null; }
 // ---------- horas ----------
 function durHora(t) {
   const m = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.)?\s*(?:[–—-]|a)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.)?/i.exec(t || ''); if (!m) return null;
@@ -1381,12 +1386,14 @@ function vGen(id) {
     ${x.sc.all.length ? `<details class="mses"><summary>Ver las ${x.sc.all.length} sesiones</summary><div class="chips">${x.sc.mods.flatMap(m => m.ses.map(d => `<span class="chip" style="cursor:default;background:${modCol(m.idx)};border-color:transparent;color:#1b1b1b" title="Módulo ${m.idx+1}">M${m.idx + 1} · ${fdw(d)}</span>`)).join('')}</div></details>` : ''}
     <div class="note small">Las fechas de cada módulo se calculan solas con la fecha de inicio, los días de clase y los inhábiles del calendario IBERO. «Fijar» congela las fechas de un módulo; «Auto» las vuelve a calcular.</div>
   </section>
-  <section class="card pad sec"><div class="sec-h"><h2>Inscripciones y precios</h2>${x.eq ? `<span class="small muted">${esc(x.eq.nombre)} · duración ${x.eq.meses} meses · <a href="#programas">editar precios</a></span>` : ''}</div>
+  <section class="card pad sec"><div class="sec-h"><h2>Inscripciones y precios</h2>${x.eq ? `<span class="small muted">${esc(x.eq.nombre)}${x.eq.manual && x.eq.fuente ? ` con las becas de ${esc(x.eq.fuente)}` : ''} · duración ${x.eq.meses} meses · <a href="#programas">editar precios</a></span>` : ''}</div>
     <div class="form" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
       ${fld('Esquema de precios', sel([['', 'Automático · ' + ((esquemas().find(e => e.id === esqAuto(g.programaId, x.p)) || {}).nombre || 'sin esquema')], ...esquemas().map(e => [e.id, e.nombre]), ['ninguno', 'Otro (precio manual)']], g.esquemaPrecio || '', b('esquemaPrecio', 'opt'), false))}
-      ${!x.eq ? fld('Costo total', `<input class="in num" type="number" min="0" value="${g.costoInscripcion ?? ''}" ${b('costoInscripcion', 'num')}>`) : ''}
+      ${!x.eq || x.eq.manual ? fld('Costo total (precio de lista)', `<input class="in num" type="number" min="0" value="${g.costoInscripcion ?? ''}" ${b('costoInscripcion', 'num')}>`) : ''}
+      ${g.esquemaPrecio === 'ninguno' ? fld('Becas y descuentos', sel([...esquemas().filter(e => e.porHora == null).map(e => [e.id, 'Los de ' + e.nombre]), ['ninguno', 'Sin descuentos']], g.descuentosDe || 'diplomados', b('descuentosDe', 'opt'), false)) : ''}
+      ${g.esquemaPrecio === 'ninguno' ? fld('Parcialidades del precio de lista', sel([...Array(12)].map((_, k) => [String(k + 1), k ? `${k + 1} pagos` : '1 pago']), String(x.eq ? x.eq.pagosLista : (g.parcialidades || 1)), b('parcialidades', 'num'), false)) : ''}
     </div>
-    ${!x.eq ? (() => { const ph = precioHora(); const h = x.horas || 0; const sug = Math.round(ph * h);
+    ${!x.eq || x.eq.manual ? (() => { const ph = precioHora(); const h = x.horas || 0; const sug = Math.round(ph * h);
       return `<div class="phora"><div><span class="lbl">Precio por hora de referencia</span><b>${money(ph)}</b><small>${esc(precioHoraFuente())}</small></div>
         <div><span class="lbl">Horas de esta generación</span><b>${h ? hTxt(h) : '—'}</b><small>${h ? (x.horasFuente === 'calc' ? 'calculadas con el calendario' : 'capturadas') : 'captura las horas arriba'}</small></div>
         <div><span class="lbl">Costo sugerido</span><b>${h ? money(sug) : '—'}</b><small>${h ? `${money(ph)} × ${hTxt(h)}` : ''}</small>${h && canWrite ? `<button class="btn sm w" data-act="usar-ph" data-id="${id}" data-v="${sug}" style="margin-top:6px">Usar este costo</button>` : ''}</div>
