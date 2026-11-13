@@ -803,11 +803,13 @@ function schedule(g) {
   const all = mods.flatMap(m => m.ses).sort();
   return { mods, all, inicio: all[0] || g.inicio || null, fin: all.length ? all[all.length - 1] : (g.finManual || null) };
 }
+const ST_MAN = ['En desarrollo','En planeación','En lanzamiento','Activo'];
 function statusOf(g, sc) {
   const p = S.programas[g.programaId] || {};
   const ini = sc.inicio, fin = sc.fin;
   const started = ini && ini <= TODAY;
   if (g.pausada || (p.oferta === 'Pausado' && !started)) return 'Pausado';
+  if (ST_MAN.includes(g.estatusManual) && !(fin && TODAY > fin)) return g.estatusManual;
   if (!ini) return p.oferta === 'En diseño' ? 'En desarrollo' : 'En planeación';
   if (TODAY < ini) return 'En lanzamiento';
   if (fin && TODAY > fin) return 'Concluido';
@@ -1460,6 +1462,7 @@ function vGen(id) {
       ${fld('Modalidad', sel(MODAL, g.modalidad, b('modalidad')))}
       ${fld('Módulos planeados', sel([...Array(12)].map((_, k) => [String(k + 1), `${k + 1} módulo${k ? 's' : ''}`]), g.modulosPlaneados != null ? String(g.modulosPlaneados) : '', b('modulosPlaneados', 'num')))}
       ${fld('Días sin clase solo para este grupo', `<input class="in" value="${esc((g.excluir || []).join(', '))}" placeholder="2027-02-23, 2027-03-02" ${b('excluir', 'dates')}>`)}
+      ${fld(`Estatus <span class="muted">(${ST_MAN.includes(g.estatusManual) ? 'fijado a mano' : 'automático: ' + esc(x.st)})</span>`, `<select class="in" ${b('estatusManual', 'opt')}><option value="">Automático (según fechas)</option>${ST_MAN.map(v => `<option value="${v}" ${g.estatusManual === v ? 'selected' : ''}>${v}</option>`).join('')}</select>`)}
       <div class="f" style="justify-content:flex-end"><label style="display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px;color:var(--fg)"><input type="checkbox" ${g.pausada ? 'checked' : ''} ${b('pausada', 'bool')}> Generación en pausa</label></div>
       ${fld('Notas', `<textarea class="in" ${b('notas')}>${esc(g.notas || '')}</textarea>`, true)}
     </div>
