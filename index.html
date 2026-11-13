@@ -1257,47 +1257,91 @@ function calPdf(id, mid) {
   const x = D.byId[id]; if (!x) return; const g = x.g;
   const mods = x.sc.mods.filter(m => m.ses.length && (!mid || m.id === mid));
   if (!mods.length) { toast('Ese módulo todavía no tiene fechas'); return; }
-  const ses = mods.flatMap(m => m.ses); const ini = ses[0], fin = ses[ses.length - 1];
+  const ses = mods.flatMap(m => m.ses).sort(); const ini = ses[0], fin = ses[ses.length - 1];
   const dias = [...new Set(ses.map(d => pd(d).getDay()))].sort((a, b) => (a || 7) - (b || 7));
-  const horarios = [...new Set(ses.map(d => horarioDe(g, d)).filter(Boolean))];
-  const horarioTxt = g.horarioDia && Object.keys(g.horarioDia).length ? dias.map(d => (g.horarioDia[d] ? DIAS_L[d][0].toUpperCase() + DIAS_L[d].slice(1) + ' ' + g.horarioDia[d].replace(/^(Lun|Mar|Mié|Jue|Vie|Sáb|Dom)\s+/, '') : '')).filter(Boolean).join(' · ') : horarios.join(' · ');
-  const hrs = ses.reduce((a, d) => a + (durHora(horarioDe(g, d)) || 0), 0);
+  const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
+  const hz = t => { const m = /(\d{1,2}):(\d{2})\s*[–—-]\s*(\d{1,2}):(\d{2})/.exec(t || ''); if (!m || /am|pm/i.test(t)) return t; const f = (h, mi) => { h = +h; return `${h > 12 ? h - 12 : h}:${mi}`; }; const ap = h => (+h < 12 ? 'am' : 'pm'); return ap(m[1]) === ap(m[3]) ? `${f(m[1], m[2])}–${f(m[3], m[4])} ${ap(m[3])}` : `${f(m[1], m[2])} ${ap(m[1])}–${f(m[3], m[4])} ${ap(m[3])}`; };
+  const horDe = d => hz(horarioDe(g, d)) || 'Por confirmar';
+  const horarioTxt = dias.map(d => `${cap(DIAS_L[d])} ${hz((g.horarioDia || {})[d] ? horarioDe(g, ses.find(s => pd(s).getDay() === d)) : g.horario) || ''}`.trim()).join(' · ');
+  const hrsSes = ses.reduce((a, d) => a + (durHora(horarioDe(g, d)) || 0), 0);
+  const horas = mid ? Math.round(hrsSes * 10) / 10 : (x.horas || Math.round(hrsSes * 10) / 10);
+  const lugar = g.modalidad === 'En línea' || g.sede === 'En línea' ? 'En línea' : [g.sede === 'Coparmex' ? 'COPARMEX' : g.sede, g.salon].filter(Boolean).join(' · ') || 'Por confirmar';
   const sinClase = [];
   for (let d = ini; d <= fin; d = addDays(d, 1)) { const w = pd(d).getDay(); if (!dias.includes(w)) continue; const why = inhSet.get(d); if (why && why !== 'Descanso') sinClase.push([d, why]); else if ((g.excluir || []).includes(d)) sinClase.push([d, 'Sin clase para este grupo']); }
   const uno = !!mid; const m0 = mods[0];
-  const titulo = uno ? `Módulo ${m0.idx + 1}: ${m0.nombre || 'Sin nombre'}` : `${x.nombre}`;
+  const PAL = [['#8A1538','#fff'],['#5B5552','#fff'],['#C27C8E','#231f1e'],['#A0673A','#fff'],['#2F2B2A','#fff'],['#D9B3BC','#231f1e'],['#8E8784','#fff'],['#E0C29F','#231f1e'],['#6E1A30','#fff'],['#BDB5B1','#231f1e'],['#B5543E','#fff'],['#E9DCD6','#231f1e']];
+  const colDe = {}; mods.forEach((m, k) => { m.ses.forEach(d => { colDe[d] = [PAL[(uno ? m.idx : k) % PAL.length], m]; }); });
+  // meses
+  const meses = []; for (let y = +ini.slice(0, 4), mo = +ini.slice(5, 7); `${y}-${String(mo).padStart(2, '0')}` <= fin.slice(0, 7); mo === 12 ? (y++, mo = 1) : mo++) meses.push([y, mo]);
+  const mesHtml = ([y, mo]) => { const first = new Date(y, mo - 1, 1), off = (first.getDay() + 6) % 7, nd = new Date(y, mo, 0).getDate(); let cells = '';
+    for (let k = 0; k < off; k++) cells += '<td></td>';
+    for (let dd = 1; dd <= nd; dd++) { const d = `${y}-${String(mo).padStart(2, '0')}-${String(dd).padStart(2, '0')}`; const c = colDe[d]; const inh = !c && dias.includes(pd(d).getDay()) && (inhSet.get(d) && inhSet.get(d) !== 'Descanso' || (g.excluir || []).includes(d)) && d >= ini && d <= fin;
+      cells += c ? `<td><span class="dc" style="background:${c[0][0]};color:${c[0][1]}">${dd}</span></td>` : `<td class="${inh ? 'inh' : ''} ${pd(d).getDay() === 0 ? 'dom' : ''}"><span>${dd}</span></td>`;
+      if ((off + dd) % 7 === 0 && dd < nd) cells += '</tr><tr>'; }
+    return `<div class="mes"><div class="mt">${cap(MESES_L[mo - 1])} ${y}</div><table class="mg"><thead><tr>${['L','M','M','J','V','S','D'].map(t => `<th>${t}</th>`).join('')}</tr></thead><tbody><tr>${cells}</tr></tbody></table></div>`; };
+  const leyenda = mods.map((m, k) => { const c = PAL[(uno ? m.idx : k) % PAL.length]; return `<div class="ly"><span class="sw" style="background:${c[0]}"></span><div><b>Módulo ${m.idx + 1}</b> · ${esc(m.nombre || 'Sin nombre')}<div class="lyd">${fMedia(m.ses[0]).replace(/ de \d{4}$/, '')} – ${fMedia(m.ses[m.ses.length - 1])} · ${m.ses.length} sesiones</div></div></div>`; }).join('');
   let n = 0;
-  const filas = mods.map(m => `${uno ? '' : `<tr class="mh"><td colspan="4">Módulo ${m.idx + 1} · ${esc(m.nombre || 'Sin nombre')}</td></tr>`}${m.ses.map(d => `<tr><td class="c">${++n}</td><td>${DIAS_L[pd(d).getDay()][0].toUpperCase() + DIAS_L[pd(d).getDay()].slice(1)}</td><td>${fMedia(d)}</td><td>${esc(horarioDe(g, d) || 'Por confirmar')}</td></tr>`).join('')}`).join('');
+  const filas = mods.map((m, k) => `${uno ? '' : `<tr class="mh"><td colspan="4"><span class="sw" style="background:${PAL[k % PAL.length][0]}"></span>Módulo ${m.idx + 1} · ${esc(m.nombre || 'Sin nombre')}</td></tr>`}${m.ses.map(d => `<tr><td class="c">${++n}</td><td>${cap(DIAS_L[pd(d).getDay()])}</td><td>${fMedia(d)}</td><td>${esc(horDe(d))}</td></tr>`).join('')}`).join('');
   const logo = ($('.side-top img') || {}).src || '';
-  const docTitle = `Calendario – ${x.nombre} – Gen ${x.gen}${uno ? ' – Módulo ' + (m0.idx + 1) : ''}`;
+  const colabs = colabsDe(g);
+  const docTitle = `Calendario – ${x.nombre} – Generación ${x.gen}${uno ? ' – Módulo ' + (m0.idx + 1) : ''}`;
+  const tipo = (x.p.tipo || 'Diplomado').toLowerCase();
+  const pie = `<div class="pie"><span>Educación Continua · IBERO Tijuana · Tel. (664) 630 1577 · educon.iberotijuana.edu.mx</span><span>Emitido el ${fMedia(TODAY)} · Fechas sujetas a cambio</span></div>`;
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(docTitle)}</title><style>
-  @page{size:letter;margin:14mm 14mm 16mm}
-  *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#231f1e;margin:0;font-size:11.5px}
-  .bar{background:#E5202E;color:#fff;padding:14px 18px;display:flex;align-items:center;gap:16px;border-radius:6px}
-  .bar img{height:34px} .bar .t{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
-  h1{font-size:20px;margin:16px 0 2px} .sub{color:#6b6260;font-size:12.5px;margin:0 0 12px}
-  .info{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin:10px 0 14px;padding:10px 12px;background:#faf6f5;border-radius:6px}
-  .info b{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#8a7f7d;margin-bottom:1px}
-  table{width:100%;border-collapse:collapse} th{background:#231f1e;color:#fff;text-align:left;padding:6px 8px;font-size:10px;letter-spacing:.05em;text-transform:uppercase}
-  td{padding:5px 8px;border-bottom:1px solid #eee3e1} td.c{width:34px;text-align:center;color:#8a7f7d}
-  tr.mh td{background:#fbeff0;font-weight:700;color:#b3141f;padding-top:8px;border-bottom:1px solid #f0d3d6}
-  tr{page-break-inside:avoid} .nota{margin-top:14px;font-size:10.5px;color:#6b6260} .nota b{color:#231f1e}
-  .pie{margin-top:18px;padding-top:8px;border-top:1px solid #eee3e1;font-size:9.5px;color:#8a7f7d;display:flex;justify-content:space-between}
-  .tip{background:#fff7d6;border:1px solid #f2df8f;padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:12px} @media print{.tip{display:none}}
+  @page{size:letter;margin:12mm 13mm 14mm}
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact} body{font-family:Arial,Helvetica,sans-serif;color:#231f1e;margin:0;font-size:10.5px}
+  .hd{display:flex;align-items:center;gap:16px;background:#231f1e;color:#fff;padding:14px 18px;border-radius:6px;border-bottom:4px solid #8A1538}
+  .hd img.ib{height:36px} .hd .t{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#cfc7c4} .hd .h{font-size:14px;font-weight:700;margin-top:2px}
+  .hd .col{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:9px;color:#cfc7c4;text-align:right}
+  .hd .col .lg{background:#fff;border-radius:5px;padding:4px 7px;display:flex;align-items:center;gap:8px} .hd .col .lg img{height:28px;max-width:110px;object-fit:contain} .hd .col .lg b{color:#231f1e;font-size:10px}
+  h1{font-size:19px;margin:14px 0 2px;color:#231f1e;line-height:1.2} .sub{color:#8A1538;font-size:11.5px;font-weight:700;margin:0 0 10px}
+  .info{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}
+  .info div{background:#f6f2f1;border-radius:6px;padding:8px 10px;border-top:3px solid #8A1538} .info b{display:block;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:#6b6260;margin-bottom:2px}
+  h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8A1538;margin:12px 0 6px;border-bottom:1px solid #e6dedc;padding-bottom:4px}
+  .meses{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 14px}
+  .mes{break-inside:avoid} .mt{font-weight:700;font-size:11px;margin-bottom:3px;color:#231f1e}
+  .mg{width:100%;border-collapse:collapse;table-layout:fixed} .mg th{font-size:8px;color:#8a7f7d;font-weight:700;padding:2px 0;text-align:center}
+  .mg td{text-align:center;padding:1.5px 0;font-size:9.5px;height:19px} .mg td span{display:inline-block;width:19px;height:17px;line-height:17px;border-radius:4px}
+  .mg td.dom span{color:#bcb3b0} .mg td.inh span{background:repeating-linear-gradient(45deg,#e4dedc 0 3px,#f4f0ef 3px 6px);color:#8a7f7d}
+  .mg .dc{font-weight:700}
+  .leyenda{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-top:10px}
+  .ly{display:flex;gap:8px;align-items:flex-start;font-size:10px;break-inside:avoid} .lyd{color:#6b6260;font-size:9px;margin-top:1px}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;flex:none;margin-top:1px}
+  .simb{display:flex;gap:16px;font-size:9px;color:#6b6260;margin-top:8px} .simb span{display:inline-flex;align-items:center;gap:5px}
+  .simb i{display:inline-block;width:14px;height:11px;border-radius:3px;background:repeating-linear-gradient(45deg,#e4dedc 0 3px,#f4f0ef 3px 6px)}
+  .pol{margin-top:12px;padding:9px 12px;border-left:4px solid #8A1538;background:#f6f2f1;border-radius:0 6px 6px 0;font-size:10px}
+  .pol b{color:#8A1538}
+  table.ls{width:100%;border-collapse:collapse} .ls th{background:#231f1e;color:#fff;text-align:left;padding:5px 8px;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase}
+  .ls td{padding:4px 8px;border-bottom:1px solid #eee7e5} .ls td.c{width:32px;text-align:center;color:#8a7f7d}
+  .ls tr.mh td{background:#f6f2f1;font-weight:700;color:#231f1e;padding-top:6px} .ls tr.mh .sw{margin-right:6px;vertical-align:-1px}
+  tr{break-inside:avoid} .nota{margin-top:8px;font-size:9.5px;color:#6b6260} .nota b{color:#231f1e}
+  .pb{break-before:page}
+  .pie{margin-top:14px;padding-top:6px;border-top:1px solid #e6dedc;font-size:8.5px;color:#8a7f7d;display:flex;justify-content:space-between;gap:10px}
+  .tip{background:#fff7d6;border:1px solid #f2df8f;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:12px} @media print{.tip{display:none}}
   </style></head><body>
-  <div class="tip">Para guardarlo como PDF, en la ventana de impresión elige <b>"Guardar como PDF"</b> como destino.</div>
-  <div class="bar">${logo ? `<img src="${logo}" alt="IBERO Tijuana">` : '<b>IBERO Tijuana</b>'}<div><div class="t">Educación Continua y Posgrado</div><div style="font-size:14px;font-weight:700">${uno ? 'Calendario del módulo' : 'Calendario de clases'}</div></div></div>
-  <h1>${esc(titulo)}</h1>${colabsDe(g).length ? `<div style="display:flex;align-items:center;gap:12px;margin:4px 0 6px;font-size:11px;color:#6b6260">En colaboración con ${colabsDe(g).map(([, o]) => o.logo ? `<img src="${o.logo}" alt="${esc(o.nombre)}" style="height:28px">` : `<b>${esc(o.nombre)}</b>`).join('')}</div>` : ''}<p class="sub">${uno ? esc(x.nombre) + ' · ' : ''}Generación ${x.gen}${g.etiqueta ? ' · ' + esc(g.etiqueta) : ''}</p>
+  <div class="tip">Para guardarlo como PDF, en la ventana de impresión elige <b>"Guardar como PDF"</b> como destino y activa <b>"Gráficos de fondo"</b> si no se ven los colores.</div>
+  <div class="hd">${logo ? `<img class="ib" src="${logo}" alt="IBERO Tijuana">` : '<b>IBERO Tijuana</b>'}<div><div class="t">Educación Continua y Posgrado</div><div class="h">${uno ? 'Calendario del módulo' : 'Calendario de clases'}</div></div>
+    ${colabs.length ? `<div class="col"><span>En colaboración con</span>${colabs.map(([, o]) => `<span class="lg">${o.logo ? `<img src="${o.logo}" alt="${esc(o.nombre)}">` : ''}<b>${esc(o.nombre)}</b></span>`).join('')}</div>` : ''}</div>
+  <h1>${esc(uno ? `Módulo ${m0.idx + 1}: ${m0.nombre || 'Sin nombre'}` : x.nombre)}</h1>
+  <p class="sub">${uno ? esc(x.nombre) + ' · ' : ''}Generación ${x.gen} · ${horas ? hTxt(horas) + ' · ' : ''}${esc(g.modalidad === 'En línea' ? 'En línea' : (g.modalidad || 'Presencial'))}</p>
   <div class="info">
-    <div><b>Periodo</b>${fLarga(ini)} – ${fLarga(fin)}</div>
-    <div><b>Días y horario</b>${esc(g.horarioDia && Object.keys(g.horarioDia).length && horarioTxt ? horarioTxt : (() => { const dd = dias.map(d => DIAS_L[d]).join(' y '); return dd[0].toUpperCase() + dd.slice(1) + (horarioTxt ? ' · ' + horarioTxt : ' · horario por confirmar'); })())}</div>
-    <div><b>Sede / modalidad</b>${esc([g.sede, g.modalidad && g.modalidad !== g.sede ? g.modalidad : ''].filter(Boolean).join(' · ') || '—')}</div>
-    <div><b>Sesiones</b>${ses.length} sesiones${hrs ? ` · ${hTxt(Math.round(hrs * 10) / 10)} en vivo` : ''}</div>
+    <div><b>Periodo</b>${fMedia(ini)} – ${fMedia(fin)}</div>
+    <div><b>Días y horario</b>${esc(horarioTxt || 'Por confirmar')}</div>
+    <div><b>Sede${g.salon ? ' y salón' : ''}</b>${esc(lugar)}</div>
+    <div><b>${uno ? 'Sesiones del módulo' : 'Sesiones'}</b>${ses.length} sesiones${hrsSes ? ` · ${hTxt(Math.round(hrsSes * 10) / 10)} en aula` : ''}</div>
   </div>
-  <table><thead><tr><th>#</th><th>Día</th><th>Fecha</th><th>Horario</th></tr></thead><tbody>${filas}</tbody></table>
+  <h2>Calendario por mes</h2>
+  <div class="meses">${meses.map(mesHtml).join('')}</div>
+  <div class="simb"><span><span class="sw" style="background:#8A1538"></span>Día de clase (color de su módulo)</span><span><i></i>Día inhábil o sin clase</span></div>
+  <div class="leyenda">${leyenda}</div>
+  ${uno ? '' : `<div class="pol"><b>Asistencia y constancia.</b> Para obtener la constancia del ${esc(tipo)} es necesario cubrir como mínimo el 80% de asistencia a las sesiones y cumplir con las actividades y evaluaciones de cada módulo.</div>`}
+  ${pie}
+  <div class="pb"></div>
+  <h2 style="margin-top:0">Fechas de clase</h2>
+  <table class="ls"><thead><tr><th>#</th><th>Día</th><th>Fecha</th><th>Horario</th></tr></thead><tbody>${filas}</tbody></table>
   ${sinClase.length ? `<div class="nota"><b>Sin clase en este periodo:</b> ${sinClase.map(([d, w]) => `${fMedia(d).replace(/ de \d{4}$/, '')} (${esc(w)})`).join(' · ')}</div>` : ''}
-  <div class="pie"><span>Fechas sujetas a cambio. Cualquier ajuste se avisará con anticipación.</span><span>Generado el ${fMedia(TODAY)}</span></div>
-  <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),300));<\/script></body></html>`;
+  ${pie}
+  <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),400));<\/script></body></html>`;
   const w = window.open('', '_blank');
   if (!w) { toast('Tu navegador bloqueó la ventana. Permite ventanas emergentes para esta página.'); return; }
   w.document.open(); w.document.write(html); w.document.close();
