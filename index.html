@@ -772,6 +772,7 @@ const PALETA = ['#F2A7AE','#F5C38E','#E9DE8A','#A9DDB0','#9FC3EE','#C7B2EC','#F0
 // ---------- estado ----------
 const S = { programas:{}, gens:{}, profes:{}, orgs:{}, inter:{}, tareas:{}, preguntas:{}, alumnos:{}, asist:{}, precios:null, inh:{ lista:[] }, loaded:new Set() };
 let db = null, user = null, myId = null, canWrite = true, dirty = false, ROL = 'admin';
+const edInhOk = () => canWrite && ['admin','coordinacion'].includes(ROL);
 const ui = { genTab:'activos', q:'', calMes:null, calProg:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'programa', genArea:'' };
 
 // ---------- motor de fechas ----------
@@ -1559,10 +1560,10 @@ function vCalendario() {
   <section class="card pad sec"><div class="sec-h"><h2>Línea de tiempo ${yr}</h2><span class="small muted">${rows.length} generaciones</span></div>
     <div class="gantt"><div></div><div class="gm">${MES.map(x => `<span>${x}</span>`).join('')}</div>${gantt || '<div></div><div class="muted small">Sin generaciones con fechas este año.</div>'}</div></section>
   <section class="card pad sec"><div class="sec-h"><h2>Días inhábiles</h2><span class="small muted">${esc(S.inh.fuente || '')}</span></div>
-    <div class="note small">Si agregas o quitas un día aquí, todas las fechas automáticas de los módulos se recorren solas.</div>
+    ${edInhOk() ? '<div class="note small">Si agregas o quitas un día aquí, todas las fechas automáticas de los módulos se recorren solas.</div>' : ''}
     <div class="tbl-w"><table><thead><tr><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Tipo</th><th></th></tr></thead><tbody>
-    ${inhs.map(r => `<tr><td class="num">${fd(r.desde)}</td><td class="num">${r.hasta && r.hasta !== r.desde ? fd(r.hasta) : '—'}</td><td>${esc(r.motivo || '')}</td><td class="small muted">${esc(r.tipo || '')}</td><td><button class="btn ghost sm danger w" data-act="del-inh" data-i="${r.i}">Quitar</button></td></tr>`).join('')}
-    <tr><td><input class="in" type="date" id="ih-a" aria-label="Desde"></td><td><input class="in" type="date" id="ih-b" aria-label="Hasta"></td><td><input class="in" id="ih-m" placeholder="Motivo" aria-label="Motivo"></td><td>${sel(['Descanso obligatorio','Vacaciones del personal','Evento institucional','Otro'], 'Otro', 'id="ih-t" aria-label="Tipo"', false)}</td><td><button class="btn pri sm w" data-act="add-inh">Agregar</button></td></tr>
+    ${inhs.map(r => `<tr><td class="num">${fd(r.desde)}</td><td class="num">${r.hasta && r.hasta !== r.desde ? fd(r.hasta) : '—'}</td><td>${esc(r.motivo || '')}</td><td class="small muted">${esc(r.tipo || '')}</td><td>${edInhOk() ? `<button class="btn ghost sm danger w" data-act="del-inh" data-i="${r.i}">Quitar</button>` : ''}</td></tr>`).join('')}
+    ${edInhOk() ? `<tr><td><input class="in" type="date" id="ih-a" aria-label="Desde"></td><td><input class="in" type="date" id="ih-b" aria-label="Hasta"></td><td><input class="in" id="ih-m" placeholder="Motivo" aria-label="Motivo"></td><td>${sel(['Descanso obligatorio','Vacaciones del personal','Evento institucional','Otro'], 'Otro', 'id="ih-t" aria-label="Tipo"', false)}</td><td><button class="btn pri sm w" data-act="add-inh">Agregar</button></td></tr>` : ''}
     </tbody></table></div></section>`;
 }
 
