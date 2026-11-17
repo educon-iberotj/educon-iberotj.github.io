@@ -158,7 +158,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_EEJaaTEXrh0y8j_dq82C4g_kXt8nrYF';
     me: async () => (await user.profiles([session.user.id]))[session.user.id],
     isOwner: () => false, canEdit: () => true, can: async () => true,
     async rol() { const { data } = await sb.from('perfiles').select('rol').eq('id', session.user.id).maybeSingle(); return (data && data.rol) || 'coordinacion'; },
-    async equipo() { const { data } = await sb.from('perfiles').select('id,nombre,email,rol').order('nombre'); return data || []; },
+    async equipo() { const { data } = await sb.from('perfiles').select('id,nombre,email,rol,alcance').order('nombre'); return data || []; },
+    async asignarAlcance(id, gens) { const { error } = await sb.rpc('asignar_alcance', { p_usuario: id, p_gens: gens }); if (error) throw error; },
     async asignarRol(id, rol) { const { error } = await sb.rpc('asignar_rol', { p_usuario: id, p_rol: rol }); if (error) throw error; },
     async profiles(ids) {
       const need = ids.filter(i => !profCache.has(i));
@@ -2243,11 +2244,22 @@ function vEquipo() {
   if (!ui.eq) { vEquipoLoad(); return '<div class="head"><div><h1>Equipo</h1></div></div><div class="loading">Cargando…</div>'; }
   const R = { admin:'Administrador (todo + equipo)', coordinacion:'Coordinación (todo)', cobranza:'Cobranza (alumnos y cobranza)', asistencia:'Asistencia (lista, QR y calendario)', lectura:'Visualización (ve todo, no edita)' };
   return `<div class="head"><div><h1>Equipo</h1><p>Quién entra a la app y qué puede ver. Para agregar a alguien: Supabase → Authentication → Users → Add user (con «Auto Confirm User»). Aparece aquí en cuanto entre por primera vez.</p></div></div>
-  <div class="card tbl-w"><table><thead><tr><th>Persona</th><th>Correo</th><th>Rol</th></tr></thead><tbody>
-    ${ui.eq.map(p => `<tr><td><b>${esc(p.nombre || '')}</b>${p.id === myId ? ' <span class="muted small">(tú)</span>' : ''}</td><td class="small">${esc(p.email || '')}</td><td>${sel(Object.entries(R), p.rol, `data-rol="${p.id}" ${p.id === myId ? 'disabled' : ''}`, false)}</td></tr>`).join('')}
+  <div class="card tbl-w"><table><thead><tr><th>Persona</th><th>Correo</th><th>Rol</th><th>Programas que puede ver</th></tr></thead><tbody>
+    ${ui.eq.map(p => `<tr><td><b>${esc(p.nombre || '')}</b>${p.id === myId ? ' <span class="muted small">(tú)</span>' : ''}</td><td class="small">${esc(p.email || '')}</td><td>${sel(Object.entries(R), p.rol, `data-rol="${p.id}" ${p.id === myId ? 'disabled' : ''}`, false)}</td><td>${alcCell(p)}</td></tr>`).join('')}
   </tbody></table></div>
-  <div class="note small"><b>Administrador:</b> ve y edita todo y asigna roles. <b>Coordinación:</b> ve y edita todo. <b>Cobranza:</b> solo Alumnos, Cobranza y Pendientes. <b>Asistencia:</b> pasa lista y muestra el QR; ve Alumnos sin datos de pago.</div>`;
+  <div class="note small"><b>Administrador:</b> ve y edita todo y asigna roles. <b>Coordinación:</b> ve y edita todo. <b>Cobranza:</b> solo Alumnos, Cobranza y Pendientes. <b>Asistencia:</b> pasa lista, muestra el QR y consulta el calendario. <b>Programas que puede ver:</b> si eliges uno o varios, esa persona solo ve esas generaciones (sus alumnos, asistencia y calendario); vacío = todos.</div>`;
 }
+function genEtq(id) { const x = D.byId[id]; return x ? `${x.nombre} · Gen ${x.gen}` : id; }
+function alcCell(p) {
+  if (['admin','coordinacion'].includes(p.rol)) return '<span class="muted small">Todos</span>';
+  const a = p.alcance || [];
+  const chips = a.map(g => `<span class="tag" style="display:inline-flex;gap:6px;align-items:center;margin:2px 4px 2px 0">${esc(genEtq(g))}<button class="ib" data-alc-del="${p.id}|${esc(g)}" title="Quitar" style="border:0;background:none;cursor:pointer;padding:0">✕</button></span>`).join('');
+  const ops = D.gens.filter(x => !a.includes(x.id) && x.st !== 'Concluido' && x.st !== 'Cancelado').sort((x, y) => (x.nombre + x.gen).localeCompare(y.nombre + y.gen)).map(x => `<option value="${esc(x.id)}">${esc(x.nombre)} · Gen ${esc(String(x.gen))}</option>`).join('');
+  return `${a.length ? chips : '<span class="muted small">Todos los programas</span> '}<select class="in" data-alc-add="${p.id}" style="max-width:260px;margin-top:4px"><option value="">+ Limitar a un programa…</option>${ops}</select>`;
+}
+async function setAlcance(uid, gens) { try { await user.asignarAlcance(uid, gens); toast(gens.length ? 'Permisos actualizados' : 'Ahora ve todos los programas'); ui.eq = null; render(); } catch (e) { toast('No se pudo guardar: ' + (e.message || e)); } }
+document.addEventListener('change', e => { const el = e.target; if (!el.dataset || !el.dataset.alcAdd || !el.value) return; const uid = el.dataset.alcAdd; const p = (ui.eq || []).find(q => q.id === uid); setAlcance(uid, [...new Set([...((p && p.alcance) || []), el.value])]); });
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-alc-del]'); if (!b) return; const [uid, gid] = b.dataset.alcDel.split('|'); const p = (ui.eq || []).find(q => q.id === uid); setAlcance(uid, ((p && p.alcance) || []).filter(g => g !== gid)); });
 
 // ---------- eventos ----------
 document.addEventListener('change', e => {
