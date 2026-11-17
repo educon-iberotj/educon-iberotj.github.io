@@ -1940,7 +1940,7 @@ const SECC = {
   admin:['tablero','calendario','diplomados','descargas','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes','equipo'],
   coordinacion:['tablero','calendario','diplomados','descargas','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes'],
   cobranza:['alumnos','cobranza','pendientes'],
-  asistencia:['asistencia','descargas','alumnos','pendientes'],
+  asistencia:['asistencia','calendario'],
   lectura:['tablero','calendario','diplomados','descargas','vinculacion','profesores','programas','alumnos','cobranza','asistencia','pendientes','faltantes'],
 };
 const secOf = r => r.startsWith('t-') ? 'pendientes' : r.startsWith('d-') ? 'diplomados' : r.startsWith('p-') ? 'profesores' : r.startsWith('pr-') ? 'programas' : r.startsWith('o-') ? 'vinculacion' : r.startsWith('a-') ? 'alumnos' : r.startsWith('as-') ? 'asistencia' : r;
@@ -2241,7 +2241,7 @@ async function setAsis(gid, fecha, aid, estado, via) {
 async function vEquipoLoad() { if (!user || !user.equipo) return; ui.eq = await user.equipo(); render(); }
 function vEquipo() {
   if (!ui.eq) { vEquipoLoad(); return '<div class="head"><div><h1>Equipo</h1></div></div><div class="loading">Cargando…</div>'; }
-  const R = { admin:'Administrador (todo + equipo)', coordinacion:'Coordinación (todo)', cobranza:'Cobranza (alumnos y cobranza)', asistencia:'Asistencia (lista y QR)', lectura:'Visualización (ve todo, no edita)' };
+  const R = { admin:'Administrador (todo + equipo)', coordinacion:'Coordinación (todo)', cobranza:'Cobranza (alumnos y cobranza)', asistencia:'Asistencia (lista, QR y calendario)', lectura:'Visualización (ve todo, no edita)' };
   return `<div class="head"><div><h1>Equipo</h1><p>Quién entra a la app y qué puede ver. Para agregar a alguien: Supabase → Authentication → Users → Add user (con «Auto Confirm User»). Aparece aquí en cuanto entre por primera vez.</p></div></div>
   <div class="card tbl-w"><table><thead><tr><th>Persona</th><th>Correo</th><th>Rol</th></tr></thead><tbody>
     ${ui.eq.map(p => `<tr><td><b>${esc(p.nombre || '')}</b>${p.id === myId ? ' <span class="muted small">(tú)</span>' : ''}</td><td class="small">${esc(p.email || '')}</td><td>${sel(Object.entries(R), p.rol, `data-rol="${p.id}" ${p.id === myId ? 'disabled' : ''}`, false)}</td></tr>`).join('')}
