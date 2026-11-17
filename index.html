@@ -2446,6 +2446,7 @@ window.addEventListener('hashchange', () => { ui.newGen = ui.newGen && ['tablero
 $('#exp').addEventListener('click', async () => {
   if (!window.XLSX) { toast('No se pudo cargar el generador de Excel'); return; }
   derive();
+  if (ROL === 'asistencia') { await exportarAsistencia(); return; }
   const wb = XLSX.utils.book_new();
   const add = (name, rows) => { const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = Object.keys(rows[0] || {}).map(k => ({ wch: Math.min(48, Math.max(10, k.length + 2, ...rows.slice(0, 80).map(r => String(r[k] ?? '').length))) })); XLSX.utils.book_append_sheet(wb, ws, name); };
   const gs = [...D.gens].sort((a, b) => (b.sc.inicio || '0').localeCompare(a.sc.inicio || '0'));
@@ -2473,6 +2474,33 @@ $('#exp').addEventListener('click', async () => {
   try { await dl.save({ filename:`EduCon IBERO Tijuana ${TODAY}.xlsx`, data:new Blob([buf]) }); toast('Excel listo'); }
   catch (err) { if (err && err.code !== 'declined') toast('No se pudo descargar'); }
 });
+
+async function exportarAsistencia() {
+  const wb = XLSX.utils.book_new(); const usados = new Set();
+  const fdc = d => { const t = pd(d); return `${t.getDate()} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][t.getMonth()]}`; };
+  const gens = D.gens.filter(x => Object.values(S.alumnos || {}).some(a => a.generacionId === x.id));
+  gens.forEach(x => {
+    const marcas = D.asisByGen[x.id] || {};
+    const fechas = [...new Set([...x.sc.all.filter(d => d <= TODAY), ...Object.keys(marcas)])].sort();
+    const als = Object.entries(S.alumnos).filter(([, a]) => a.generacionId === x.id).sort((a, b) => nombreAl(a[1]).localeCompare(nombreAl(b[1])));
+    const rows = als.map(([id, a]) => {
+      const r = { 'Matrícula':a.matricula || '', 'Alumno':nombreAl(a) }; let p = 0, f = 0;
+      fechas.forEach(d => { const e = (marcas[d] || {})[id]; const v = e ? ASIS[asE(e.estado)][0] : ''; if (e) { if (asE(e.estado) === 'P') p++; else f++; } r[fdc(d)] = v; });
+      r['Asistencias'] = p; r['Faltas'] = f; r['% asistencia'] = (p + f) ? Math.round(p / (p + f) * 100) + '%' : '';
+      return r;
+    });
+    let nm = `${x.nombre} G${x.gen}`.replace(/[\\/?*\[\]:]/g, '').slice(0, 31); let k = 2; while (usados.has(nm)) nm = nm.slice(0, 28) + ' ' + k++; usados.add(nm);
+    const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Alumno':'Sin alumnos' }]);
+    ws['!cols'] = Object.keys(rows[0] || { a:1 }).map(c => ({ wch: c === 'Alumno' ? 34 : c === 'Matrícula' ? 12 : 11 }));
+    XLSX.utils.book_append_sheet(wb, ws, nm);
+  });
+  if (!gens.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ 'Asistencia':'Sin grupos asignados' }]), 'Asistencia');
+  const buf = XLSX.write(wb, { type:'array', bookType:'xlsx' });
+  const dl = await (window.claude?.use?.('downloads') ?? Promise.resolve(null)).catch(() => null);
+  if (!dl) { toast('La descarga no está disponible en esta vista'); return; }
+  try { await dl.save({ filename:`Asistencia ${gens.length === 1 ? gens[0].nombre + ' Gen ' + gens[0].gen + ' ' : ''}${TODAY}.xlsx`, data:new Blob([buf]) }); toast('Excel de asistencia listo'); }
+  catch (err) { if (err && err.code !== 'declined') toast('No se pudo descargar'); }
+}
 
 // ---------- menú oculto ----------
 function setMin(on) { document.querySelector('.app').classList.toggle('min', on); const b = $('#hide-menu'); b.title = on ? 'Mostrar menú' : 'Ocultar menú'; b.setAttribute('aria-label', b.title); try { localStorage.setItem('educon-menu', on ? 'min' : ''); } catch (_) {} }
