@@ -96,8 +96,49 @@ const SUPABASE_ANON_KEY = 'sb_publishable_EEJaaTEXrh0y8j_dq82C4g_kXt8nrYF';
     if (!/.+@.+\..+/.test(email)) { msg.textContent = 'Escribe tu correo arriba y vuelve a tocar «¿Olvidaste tu contraseña?».'; document.getElementById('lg-email').focus(); return; }
     msg.textContent = 'Enviando…';
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-    msg.textContent = error ? (/rate|seconds|limit/i.test(error.message) ? 'Ya te enviamos un correo hace poco; espera unos minutos e inténtalo de nuevo.' : 'No se pudo enviar: ' + error.message) : 'Listo. Si el correo está registrado, te llegará una liga para crear una contraseña nueva (revisa también spam).';
+    if (error && !/rate|seconds|limit/i.test(error.message)) { msg.textContent = 'No se pudo enviar: ' + error.message; return; }
+    showCodigo(email, error ? 'Ya te enviamos un correo hace poco. Usa el código de ese correo (o espera unos minutos para pedir otro).' : 'Te enviamos un correo con un código de 6 dígitos (revisa también spam). Escríbelo aquí:');
   });
+  function showCodigo(email, texto) {
+    hideLogin();
+    const box = document.createElement('div'); box.id = 'login';
+    box.innerHTML = `<form class="lg-card" id="lg-cod">
+      <img alt="IBERO Tijuana" src="${document.querySelector('.side img')?.src || ''}">
+      <h1>Recupera tu acceso</h1>
+      <p>${texto}</p>
+      <label for="cd-1">Código</label>
+      <input id="cd-1" inputmode="numeric" autocomplete="one-time-code" required maxlength="10" style="letter-spacing:4px;font-size:20px">
+      <button type="submit" id="cd-btn">Continuar</button>
+      <a href="#" id="cd-back" style="display:block;text-align:center;margin-top:12px;font-size:14px;color:inherit;opacity:.8">Volver</a>
+      <div id="cd-msg" role="status"></div></form>`;
+    document.body.appendChild(box);
+    document.getElementById('cd-back').addEventListener('click', e => { e.preventDefault(); box.remove(); showLogin(); });
+    document.getElementById('lg-cod').addEventListener('submit', async e => {
+      e.preventDefault();
+      const token = document.getElementById('cd-1').value.replace(/\s/g, ''), msg = document.getElementById('cd-msg');
+      document.getElementById('cd-btn').disabled = true; msg.textContent = 'Verificando…';
+      const { error } = await sb.auth.verifyOtp({ email, token, type: 'recovery' });
+      if (error) { document.getElementById('cd-btn').disabled = false; msg.textContent = /expired|invalid/i.test(error.message) ? 'El código no es válido o ya venció. Pide uno nuevo.' : 'No se pudo verificar: ' + error.message; return; }
+      box.remove(); showRecovery();
+    });
+  }
+  // liga segura: ?token_hash=…&type=recovery (no se consume hasta que la persona toca el botón)
+  (() => {
+    const q = new URLSearchParams(location.search); const th = q.get('token_hash');
+    if (!th || q.get('type') !== 'recovery') return;
+    const pinta = () => {
+      const box = document.createElement('div'); box.id = 'login';
+      box.innerHTML = `<form class="lg-card" id="lg-th"><img alt="IBERO Tijuana" src="${document.querySelector('.side img')?.src || ''}"><h1>Recupera tu acceso</h1><p>Toca el botón para crear tu nueva contraseña.</p><button type="submit" id="th-btn">Crear nueva contraseña</button><div id="th-msg" role="status"></div></form>`;
+      document.getElementById('login')?.remove(); document.body.appendChild(box);
+      box.querySelector('form').addEventListener('submit', async e => {
+        e.preventDefault(); const msg = document.getElementById('th-msg'); msg.textContent = 'Verificando…';
+        const { error } = await sb.auth.verifyOtp({ token_hash: th, type: 'recovery' });
+        if (error) { msg.textContent = 'La liga ya no es válida. Pide otra desde «¿Olvidaste tu contraseña?».'; return; }
+        history.replaceState(null, '', location.pathname); box.remove(); showRecovery();
+      });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(pinta, 300), { once:true }); else setTimeout(pinta, 300);
+  })();
   function showRecovery() {
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', showRecovery, { once:true }); return; }
     if (document.getElementById('lg-rec')) return;
