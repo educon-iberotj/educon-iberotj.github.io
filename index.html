@@ -56,7 +56,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_EEJaaTEXrh0y8j_dq82C4g_kXt8nrYF';
   const ready = new Promise(resolve => {
     const done = s => { session = s; hideLogin(); resolve(s); };
     sb.auth.getSession().then(({ data }) => { if (data.session) done(data.session); else showLogin(); });
-    sb.auth.onAuthStateChange((ev, s) => { if (s && !session) done(s); if (ev === 'SIGNED_OUT') location.reload(); });
+    sb.auth.onAuthStateChange((ev, s) => { if (s && !session) done(s); if (ev === 'PASSWORD_RECOVERY') showRecovery(); if (ev === 'SIGNED_OUT') location.reload(); });
+    if (/type=recovery/.test(location.hash)) setTimeout(showRecovery, 400);
   });
 
   // ---------- pantalla de acceso ----------
@@ -74,6 +75,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_EEJaaTEXrh0y8j_dq82C4g_kXt8nrYF';
       <label for="lg-pass">Contraseña</label>
       <input id="lg-pass" type="password" required autocomplete="current-password">
       <button type="submit" id="lg-btn">Entrar</button>
+      <a href="#" id="lg-olvide" style="display:block;text-align:center;margin-top:12px;font-size:14px;color:inherit;opacity:.8">¿Olvidaste tu contraseña?</a>
       <div id="lg-msg" role="status"></div></form>`;
     document.body.appendChild(box);
     const urlErr = new URLSearchParams(location.hash.slice(1) || location.search).get('error_description');
@@ -88,6 +90,42 @@ const SUPABASE_ANON_KEY = 'sb_publishable_EEJaaTEXrh0y8j_dq82C4g_kXt8nrYF';
     });
   }
   function hideLogin() { document.getElementById('login')?.remove(); }
+  document.addEventListener('click', async e => {
+    if (!e.target.closest || !e.target.closest('#lg-olvide')) return; e.preventDefault();
+    const email = document.getElementById('lg-email').value.trim(), msg = document.getElementById('lg-msg');
+    if (!/.+@.+\..+/.test(email)) { msg.textContent = 'Escribe tu correo arriba y vuelve a tocar «¿Olvidaste tu contraseña?».'; document.getElementById('lg-email').focus(); return; }
+    msg.textContent = 'Enviando…';
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    msg.textContent = error ? (/rate|seconds|limit/i.test(error.message) ? 'Ya te enviamos un correo hace poco; espera unos minutos e inténtalo de nuevo.' : 'No se pudo enviar: ' + error.message) : 'Listo. Si el correo está registrado, te llegará una liga para crear una contraseña nueva (revisa también spam).';
+  });
+  function showRecovery() {
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', showRecovery, { once:true }); return; }
+    if (document.getElementById('lg-rec')) return;
+    hideLogin();
+    const box = document.createElement('div'); box.id = 'login';
+    box.innerHTML = `<form class="lg-card" id="lg-rec">
+      <img alt="IBERO Tijuana" src="${document.querySelector('.side img')?.src || ''}">
+      <h1>Crea tu nueva contraseña</h1>
+      <p>Mínimo 8 caracteres.</p>
+      <label for="rc-1">Nueva contraseña</label>
+      <input id="rc-1" type="password" required minlength="8" autocomplete="new-password">
+      <label for="rc-2">Repítela</label>
+      <input id="rc-2" type="password" required minlength="8" autocomplete="new-password">
+      <button type="submit" id="rc-btn">Guardar y entrar</button>
+      <div id="rc-msg" role="status"></div></form>`;
+    document.body.appendChild(box);
+    document.getElementById('lg-rec').addEventListener('submit', async e => {
+      e.preventDefault();
+      const a = document.getElementById('rc-1').value, b = document.getElementById('rc-2').value, msg = document.getElementById('rc-msg');
+      if (a.length < 8) { msg.textContent = 'Debe tener al menos 8 caracteres.'; return; }
+      if (a !== b) { msg.textContent = 'Las contraseñas no coinciden.'; return; }
+      document.getElementById('rc-btn').disabled = true; msg.textContent = 'Guardando…';
+      const { error } = await sb.auth.updateUser({ password: a });
+      if (error) { document.getElementById('rc-btn').disabled = false; msg.textContent = 'No se pudo guardar: ' + error.message; return; }
+      msg.textContent = 'Contraseña actualizada.';
+      history.replaceState(null, '', location.pathname + '#tablero'); setTimeout(() => { box.remove(); }, 600);
+    });
+  }
 
   // ---------- base de datos (misma forma que la usaba la app en Claude) ----------
   const listeners = {}; // col -> Set(cb)
