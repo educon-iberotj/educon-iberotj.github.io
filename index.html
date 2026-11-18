@@ -239,6 +239,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_EEJaaTEXrh0y8j_dq82C4g_kXt8nrYF';
     async rol() { const { data } = await sb.from('perfiles').select('rol').eq('id', session.user.id).maybeSingle(); return (data && data.rol) || 'coordinacion'; },
     async equipo() { const { data } = await sb.from('perfiles').select('id,nombre,email,rol,alcance').order('nombre'); return data || []; },
     async asignarAlcance(id, gens) { const { error } = await sb.rpc('asignar_alcance', { p_usuario: id, p_gens: gens }); if (error) throw error; },
+    async adminUsuarios(body) { const { data, error } = await sb.functions.invoke('admin-usuarios', { body }); if (error) { let m = error.message; try { const r = await error.context.json(); if (r && r.error) m = r.error; } catch {} throw new Error(m); } if (data && data.error) throw new Error(data.error); return data; },
     async asignarRol(id, rol) { const { error } = await sb.rpc('asignar_rol', { p_usuario: id, p_rol: rol }); if (error) throw error; },
     async profiles(ids) {
       const need = ids.filter(i => !profCache.has(i));
@@ -523,6 +524,21 @@ details summary{cursor:pointer}
 .g-foot b{font:700 20px/1 var(--f-disp)}
 .esqs{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
 .esqs>.card{border-radius:14px;border-top:4px solid var(--rojo)}
+.fbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px}
+.fbar-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:flex;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;border-radius:7px;padding:6px 10px;white-space:nowrap;font-weight:600;font-size:13.5px;color:var(--fg2);cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.seg button:hover{background:var(--line2)}
+.seg button.on{background:var(--fg);color:var(--bg)}
+.seg button em{font-style:normal;font-size:12px;opacity:.6;font-variant-numeric:tabular-nums}
+.seg button.cero{opacity:.55}
+.seg.ico{background:var(--line2);border-radius:8px;padding:2px}
+.seg.ico button{padding:5px 8px}
+.seg.ico button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg.ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.fsel{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--fg2);font-weight:600}
+.fsel select{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 8px;font-weight:600;font-size:13.5px;color:var(--fg)}
+@media (max-width:700px){.fbar>.seg{flex-wrap:nowrap;overflow-x:auto;width:100%;scrollbar-width:none}.fbar>.seg::-webkit-scrollbar{display:none}.fbar-r{width:100%}.fsel{flex:1;min-width:0}.fsel select{width:100%}}
 .vtog .tab{display:inline-flex;align-items:center;gap:5px}
 .vtog svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .glist{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px}
@@ -952,7 +968,7 @@ function derive() {
 
 // ---------- escritura ----------
 const queues = {};
-function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2600); }
+function toast(t, ms) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 2600); }
 async function save(col, id, data, msg) {
   if (!db || !canWrite) { toast('No tienes permiso para editar'); return; }
   const body = { ...data, actualizadoEn: new Date().toISOString(), actualizadoPor: myId || null };
@@ -1245,12 +1261,18 @@ function vDiplomados() {
   L.sort((a, b) => { const ka = a.sc.inicio || a.g.inicioTentativo || (desc ? '0000' : '9999'), kb = b.sc.inicio || b.g.inicioTentativo || (desc ? '0000' : '9999'); return desc ? kb.localeCompare(ka) : ka.localeCompare(kb); });
   if (ui.genGroup !== 'lista') { const first = {}; L.forEach((x, i) => { if (!(x.g.programaId in first)) first[x.g.programaId] = i; }); L.sort((a, b) => (ui.genGroup === 'area' ? areaSort(areaOf(a), areaOf(b)) : 0) || first[a.g.programaId] - first[b.g.programaId] || (desc ? b.gen - a.gen : a.gen - b.gen)); }
   const isArea = ui.genGroup === 'area';
-  return `<div class="head"><div><h1>Diplomados</h1><p>Cada generación con sus fechas, módulos y profesores. Cambia la fecha de inicio y todo lo demás se recalcula.</p></div>
+  const icos = [['lista', 'Lista', '<path d="M4 6h16M4 12h16M4 18h16"/>'], ['mini', 'Compactas', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'], ['cards', 'Tarjetas', '<rect x="4" y="4" width="16" height="7" rx="1.5"/><rect x="4" y="13" width="16" height="7" rx="1.5"/>']];
+  return `<div class="head"><div><h1>Diplomados</h1><p>Cambia la fecha de inicio y módulos, profesores y fechas se recalculan.</p></div>
     <div class="tools"><input type="search" id="q-gen" placeholder="Buscar diplomado o sede" value="${esc(ui.q)}" aria-label="Buscar"><button class="btn pri w" data-act="new-gen">+ Nueva generación</button></div></div>
   ${newGenForm()}
-  <div class="tools" style="justify-content:space-between"><div class="tabs">${tabs.map(([k, n, f]) => `<button class="tab ${k === t[0] ? 'on' : ''}" data-tab="${k}">${n}<em>${D.gens.filter(f).length}</em></button>`).join('')}</div>
-    <div class="tools"><span class="small muted">Ver</span><div class="tabs"><button class="tab ${ui.genGroup === 'area' ? 'on' : ''}" data-act="gen-group" data-v="area">Por área</button><button class="tab ${ui.genGroup === 'programa' ? 'on' : ''}" data-act="gen-group" data-v="programa">Por programa</button><button class="tab ${ui.genGroup === 'lista' ? 'on' : ''}" data-act="gen-group" data-v="lista">Por fecha</button></div><div class="tabs vtog" role="group" aria-label="Formato">${[['lista', 'Lista', '<path d="M4 6h16M4 12h16M4 18h16"/>'], ['mini', 'Compactas', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'], ['cards', 'Tarjetas', '<rect x="4" y="4" width="16" height="7" rx="1.5"/><rect x="4" y="13" width="16" height="7" rx="1.5"/>']].map(([v, t, ic]) => `<button class="tab ${genView() === v ? 'on' : ''}" data-act="gen-view" data-v="${v}" title="${t}" aria-label="Ver como ${t.toLowerCase()}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${t}</span></button>`).join('')}</div></div></div>
-  <div class="tools"><span class="small muted">Área</span><div class="chips"><button class="chip ${!ui.genArea ? 'on' : ''}" data-act="gen-area" data-v="">Todas <span style="opacity:.7">${L0.length}</span></button>${areas.map(a => `<button class="chip ${ui.genArea === a ? 'on' : ''}" data-act="gen-area" data-v="${esc(a)}">${esc(a)} <span style="opacity:.7">${L0.filter(x => areaOf(x) === a).length}</span></button>`).join('')}</div></div>
+  <div class="fbar">
+    <div class="seg" role="tablist" aria-label="Estatus">${tabs.map(([k, n, f]) => { const c = D.gens.filter(f).length; return `<button class="${k === t[0] ? 'on' : ''}${!c && k !== t[0] ? ' cero' : ''}" data-tab="${k}">${n}<em>${c}</em></button>`; }).join('')}</div>
+    <div class="fbar-r">
+      <label class="fsel"><select data-gsel="genArea" aria-label="Área"><option value="">Todas las áreas (${L0.length})</option>${areas.map(a => `<option value="${esc(a)}" ${ui.genArea === a ? 'selected' : ''}>${esc(a)} (${L0.filter(x => areaOf(x) === a).length})</option>`).join('')}</select></label>
+      <label class="fsel"><select data-gsel="genGroup" aria-label="Agrupar">${[['area','Agrupar por área'],['programa','Agrupar por programa'],['lista','Ordenar por fecha']].map(([v, n]) => `<option value="${v}" ${ui.genGroup === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <div class="seg ico" role="group" aria-label="Formato">${icos.map(([v, n, ic]) => `<button class="${genView() === v ? 'on' : ''}" data-act="gen-view" data-v="${v}" title="${n}" aria-label="Ver como ${n.toLowerCase()}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg></button>`).join('')}</div>
+    </div>
+  </div>
   ${L.length ? `<div class="gwrap">${L.map((x, i) => {
       const k = y => ui.genGroup === 'area' ? areaOf(y) : ui.genGroup === 'programa' ? y.g.programaId : (y.sc.inicio || y.g.inicioTentativo || '').slice(0, 7);
       const nuevo = i === 0 || k(L[i - 1]) !== k(x);
@@ -2323,12 +2345,23 @@ async function vEquipoLoad() { if (!user || !user.equipo) return; ui.eq = await 
 function vEquipo() {
   if (!ui.eq) { vEquipoLoad(); return '<div class="head"><div><h1>Equipo</h1></div></div><div class="loading">Cargando…</div>'; }
   const R = { admin:'Administrador (todo + equipo)', coordinacion:'Coordinación (todo)', cobranza:'Cobranza (alumnos y cobranza)', asistencia:'Asistencia (lista, QR y calendario)', lectura:'Visualización (ve todo, no edita)' };
-  return `<div class="head"><div><h1>Equipo</h1><p>Quién entra a la app y qué puede ver. Para agregar a alguien: Supabase → Authentication → Users → Add user (con «Auto Confirm User»). Aparece aquí en cuanto entre por primera vez.</p></div></div>
-  <div class="card tbl-w"><table><thead><tr><th>Persona</th><th>Correo</th><th>Rol</th><th>Programas que puede ver</th></tr></thead><tbody>
-    ${ui.eq.map(p => `<tr><td><b>${esc(p.nombre || '')}</b>${p.id === myId ? ' <span class="muted small">(tú)</span>' : ''}</td><td class="small">${esc(p.email || '')}</td><td>${sel(Object.entries(R), p.rol, `data-rol="${p.id}" ${p.id === myId ? 'disabled' : ''}`, false)}</td><td>${alcCell(p)}</td></tr>`).join('')}
+  const esAdm = ROL === 'admin' && user.adminUsuarios;
+  const passRow = p => `<tr class="eq-pass"><td colspan="5"><div class="tools"><span class="small"><b>Nueva contraseña para ${esc(p.nombre || p.email)}</b></span><input class="in" id="eqp-in" value="${esc(ui.eqPassVal || '')}" style="width:200px;font-family:ui-monospace,monospace" autocomplete="off" aria-label="Nueva contraseña"><button class="btn sm" data-act="eq-gen">Generar</button><button class="btn sm pri" data-act="eq-pass-ok" data-id="${p.id}">Guardar</button><button class="btn sm ghost" data-act="eq-pass-x">Cancelar</button><span class="small muted">Mínimo 8 caracteres. Cópiala y pásasela por WhatsApp; luego la puede cambiar.</span></div></td></tr>`;
+  const nuevo = !ui.eqNew ? '' : `<section class="card pad sec"><h2>Agregar persona</h2><div class="form" style="margin-top:10px">
+    <div class="f"><label for="eqn-nom">Nombre</label><input class="in" id="eqn-nom"></div>
+    <div class="f"><label for="eqn-mail">Correo</label><input class="in" id="eqn-mail" type="email" autocomplete="off"></div>
+    <div class="f"><label for="eqn-rol">Rol</label><select class="in" id="eqn-rol">${Object.entries(R).filter(([k]) => k !== 'admin').map(([k, v]) => `<option value="${k}" ${k === 'lectura' ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
+    <div class="f"><label for="eqp-in">Contraseña</label><div class="tools" style="flex-wrap:nowrap"><input class="in" id="eqp-in" value="${esc(ui.eqPassVal || '')}" style="font-family:ui-monospace,monospace" autocomplete="off"><button class="btn sm" data-act="eq-gen">Generar</button></div></div>
+  </div><div class="tools" style="margin-top:12px"><button class="btn pri" data-act="eq-new-ok">Crear cuenta</button><button class="btn ghost" data-act="eq-new-x">Cancelar</button><span class="small muted">La cuenta queda lista para entrar, sin correo de confirmación.</span></div></section>`;
+  return `<div class="head"><div><h1>Equipo</h1><p>Quién entra a la app y qué puede ver.</p></div>${esAdm ? '<div class="tools"><button class="btn pri w" data-act="eq-new">+ Agregar persona</button></div>' : ''}</div>
+  ${nuevo}
+  <div class="card tbl-w"><table><thead><tr><th>Persona</th><th>Correo</th><th>Rol</th><th>Programas que puede ver</th>${esAdm ? '<th></th>' : ''}</tr></thead><tbody>
+    ${ui.eq.map(p => `<tr><td><b>${esc(p.nombre || '')}</b>${p.id === myId ? ' <span class="muted small">(tú)</span>' : ''}</td><td class="small">${esc(p.email || '')}</td><td>${sel(Object.entries(R), p.rol, `data-rol="${p.id}" ${p.id === myId ? 'disabled' : ''}`, false)}</td><td>${alcCell(p)}</td>${esAdm ? `<td><button class="btn sm" data-act="eq-pass" data-id="${p.id}" style="white-space:nowrap">Cambiar contraseña</button></td>` : ''}</tr>${ui.eqPass === p.id ? passRow(p) : ''}`).join('')}
   </tbody></table></div>
   <div class="note small"><b>Administrador:</b> ve y edita todo y asigna roles. <b>Coordinación:</b> ve y edita todo. <b>Cobranza:</b> solo Alumnos, Cobranza y Pendientes. <b>Asistencia:</b> pasa lista, muestra el QR y consulta el calendario. <b>Programas que puede ver:</b> si eliges uno o varios, esa persona solo ve esas generaciones (sus alumnos, asistencia y calendario); vacío = todos.</div>`;
 }
+function genPass() { const L = 'abcdefghjkmnpqrstuvwxyz', N = '23456789'; const r = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }; let w = ''; for (let i = 0; i < 5; i++) w += L[r(L.length)]; let d = ''; for (let i = 0; i < 4; i++) d += N[r(N.length)]; return 'Ibero-' + w + d; }
+function copiar(t) { try { navigator.clipboard && navigator.clipboard.writeText(t).catch(() => {}); } catch {} }
 function genEtq(id) { const x = D.byId[id]; return x ? `${x.nombre} · Gen ${x.gen}` : id; }
 function alcCell(p) {
   if (['admin','coordinacion'].includes(p.rol)) return '<span class="muted small">Todos</span>';
@@ -2338,6 +2371,7 @@ function alcCell(p) {
   return `${a.length ? chips : '<span class="muted small">Todos los programas</span> '}<select class="in" data-alc-add="${p.id}" style="max-width:260px;margin-top:4px"><option value="">+ Limitar a un programa…</option>${ops}</select>`;
 }
 async function setAlcance(uid, gens) { try { await user.asignarAlcance(uid, gens); toast(gens.length ? 'Permisos actualizados' : 'Ahora ve todos los programas'); ui.eq = null; render(); } catch (e) { toast('No se pudo guardar: ' + (e.message || e)); } }
+document.addEventListener('change', e => { const el = e.target; if (el.dataset && el.dataset.gsel) { ui[el.dataset.gsel] = el.value; render(); } });
 document.addEventListener('change', e => { const el = e.target; if (!el.dataset || !el.dataset.alcAdd || !el.value) return; const uid = el.dataset.alcAdd; const p = (ui.eq || []).find(q => q.id === uid); setAlcance(uid, [...new Set([...((p && p.alcance) || []), el.value])]); });
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-alc-del]'); if (!b) return; const [uid, gid] = b.dataset.alcDel.split('|'); const p = (ui.eq || []).find(q => q.id === uid); setAlcance(uid, ((p && p.alcance) || []).filter(g => g !== gid)); });
 
@@ -2404,7 +2438,7 @@ document.addEventListener('change', e => {
   else if (el.id === 'f-prog') { ui.orgProg = el.value; render(); }
 });
 document.addEventListener('input', e => {
-  const el = e.target; if (el.id === 'as-q') { asSearch(el.value); return; }
+  const el = e.target; if (el.id === 'as-q') { asSearch(el.value); return; } if (el.id === 'eqp-in') { ui.eqPassVal = el.value; return; }
   const k = { 'q-gen':'q', 'q-prof':'profQ', 'q-org':'orgQ', 'q-t':'tQ', 'q-al':'alQ', 'q-cb':'cbQ', 'cat-q':'catQ' }[el.id];
   if (k) { ui[k] = el.value; clearTimeout(ui.t); ui.t = setTimeout(() => { const pos = el.selectionStart; render(); const n = document.getElementById(el.id); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 180); }
 });
@@ -2492,6 +2526,13 @@ document.addEventListener('click', async e => {
   else if (act === 'cal-pdf') { calPdf(a.dataset.id, a.dataset.m); }
   else if (act === 'gen-view') { ui.genView = a.dataset.v; try { localStorage.setItem('educon.genView', ui.genView); } catch {} render(); }
   else if (act === 'gen-group') { ui.genGroup = a.dataset.v; render(); }
+  else if (act === 'eq-new') { ui.eqNew = true; ui.eqPass = null; ui.eqPassVal = genPass(); render(); }
+  else if (act === 'eq-new-x') { ui.eqNew = false; render(); }
+  else if (act === 'eq-pass') { ui.eqPass = a.dataset.id; ui.eqNew = false; ui.eqPassVal = genPass(); render(); }
+  else if (act === 'eq-pass-x') { ui.eqPass = null; render(); }
+  else if (act === 'eq-gen') { const i = $('#eqp-in'); if (i) { i.value = genPass(); ui.eqPassVal = i.value; i.select(); } }
+  else if (act === 'eq-pass-ok') { const pw = ($('#eqp-in') || {}).value || ''; if (pw.length < 8) { toast('Mínimo 8 caracteres'); return; } a.disabled = true; user.adminUsuarios({ accion:'password', id:a.dataset.id, password:pw }).then(() => { const p = (ui.eq || []).find(q => q.id === a.dataset.id); ui.eqPass = null; render(); copiar(pw); toast(`Listo. Contraseña de ${p ? (p.nombre || p.email) : 'la persona'} cambiada y copiada: ${pw}`, 9000); }).catch(e => { a.disabled = false; toast('No se pudo: ' + e.message); }); }
+  else if (act === 'eq-new-ok') { const nombre = $('#eqn-nom').value.trim(), email = $('#eqn-mail').value.trim(), rol = $('#eqn-rol').value, pw = $('#eqp-in').value; if (!email) { toast('Falta el correo'); return; } if (pw.length < 8) { toast('Contraseña de mínimo 8 caracteres'); return; } a.disabled = true; user.adminUsuarios({ accion:'crear', nombre, email, rol, password:pw }).then(() => { ui.eqNew = false; ui.eq = null; render(); copiar(`${email} / ${pw}`); toast(`Cuenta creada y copiada: ${email} / ${pw}`, 9000); }).catch(e => { a.disabled = false; toast('No se pudo: ' + e.message); }); }
   else if (act === 'cal-vista') { ui.calVista = a.dataset.v; ui.calGrupo = ''; render(); }
   else if (act === 'cal-grupo') { ui.calGrupo = a.dataset.v; render(); }
   else if (act === 'cal-color') { ui.calColor = a.dataset.v; render(); }
