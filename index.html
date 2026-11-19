@@ -524,6 +524,12 @@ details summary{cursor:pointer}
 .g-foot b{font:700 20px/1 var(--f-disp)}
 .esqs{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
 .esqs>.card{border-radius:14px;border-top:4px solid var(--rojo)}
+.mrow:not(.done) select.in:has(option:checked[value="Por confirmar"]),.mrow:not(.done) select.in[aria-label="Alta en sistema"]:has(option:checked[value="no"]){background-color:#FFF4DC;border-color:#EBCB86;color:#7A4E00}
+.mrow:not(.done) select.in:has(option:checked[value="Sin asignar"]){background-color:#FDE8EA;border-color:#EFA9B1;color:#A3162B}
+:root[data-theme="dark"] .mrow:not(.done) select.in:has(option:checked[value="Por confirmar"]),:root[data-theme="dark"] .mrow:not(.done) select.in[aria-label="Alta en sistema"]:has(option:checked[value="no"]){background-color:#3A2E12;border-color:#6B5320;color:#F3D28A}
+:root[data-theme="dark"] .mrow:not(.done) select.in:has(option:checked[value="Sin asignar"]){background-color:#3D1A1F;border-color:#7A2E38;color:#F4A3AE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mrow:not(.done) select.in:has(option:checked[value="Por confirmar"]),:root:not([data-theme="light"]) .mrow:not(.done) select.in[aria-label="Alta en sistema"]:has(option:checked[value="no"]){background-color:#3A2E12;border-color:#6B5320;color:#F3D28A}
+:root:not([data-theme="light"]) .mrow:not(.done) select.in:has(option:checked[value="Sin asignar"]){background-color:#3D1A1F;border-color:#7A2E38;color:#F4A3AE}}
 .fbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px}
 .fbar-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .seg{display:flex;gap:2px;flex-wrap:wrap}
