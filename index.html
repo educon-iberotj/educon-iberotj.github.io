@@ -882,7 +882,7 @@ const PALETA = ['#F2A7AE','#F5C38E','#E9DE8A','#A9DDB0','#9FC3EE','#C7B2EC','#F0
 const S = { programas:{}, gens:{}, profes:{}, orgs:{}, inter:{}, tareas:{}, preguntas:{}, alumnos:{}, asist:{}, precios:null, inh:{ lista:[] }, loaded:new Set() };
 let db = null, user = null, myId = null, canWrite = true, dirty = false, ROL = 'admin';
 const edInhOk = () => canWrite && ['admin','coordinacion'].includes(ROL);
-const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'programa', genArea:'' };
+const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'area', genArea:'' };
 
 // ---------- motor de fechas ----------
 let inhSet = new Map();
