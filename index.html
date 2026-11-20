@@ -374,6 +374,9 @@ tbody tr.click{cursor:pointer} tbody tr.click:hover{background:var(--line2)}
 .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .s-activo{background:var(--ok-bg);color:var(--ok)} .s-lanz{background:var(--info-bg);color:var(--info)}
 .s-plan{background:var(--warn-bg);color:var(--warn)} .s-des{background:var(--vio-bg);color:var(--vio)}
+.stpick{font:inherit;font-size:12.5px;font-weight:600;border:1px solid transparent;border-radius:999px;padding:2px 24px 2px 10px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 13px) 55%,calc(100% - 9px) 55%;background-size:4px 4px;background-repeat:no-repeat;vertical-align:1px}
+.stpick:hover,.stpick:focus-visible{border-color:currentColor}
+.stpick option,.stpick optgroup{background:var(--panel);color:var(--fg)}
 .s-fin{background:var(--mute-bg);color:var(--fg2)} .s-pausa{background:var(--mute-bg);color:var(--fg3)} .s-cancel{background:var(--mute-bg);color:var(--fg3);text-decoration:line-through}
 .a-urg{background:var(--crit-bg);color:var(--crit)} .a-aten{background:var(--warn-bg);color:var(--warn)} .a-ok{background:var(--ok-bg);color:var(--ok)} .a-tiempo{background:var(--info-bg);color:var(--info)}
 .bar{height:6px;background:var(--line2);border-radius:3px;overflow:hidden;min-width:70px}
@@ -879,7 +882,7 @@ const PALETA = ['#F2A7AE','#F5C38E','#E9DE8A','#A9DDB0','#9FC3EE','#C7B2EC','#F0
 const S = { programas:{}, gens:{}, profes:{}, orgs:{}, inter:{}, tareas:{}, preguntas:{}, alumnos:{}, asist:{}, precios:null, inh:{ lista:[] }, loaded:new Set() };
 let db = null, user = null, myId = null, canWrite = true, dirty = false, ROL = 'admin';
 const edInhOk = () => canWrite && ['admin','coordinacion'].includes(ROL);
-const ui = { genTab:'marcha', genSub:'', q:'', calMes:null, calProg:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'programa', genArea:'' };
+const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'programa', genArea:'' };
 
 // ---------- motor de fechas ----------
 let inhSet = new Map();
@@ -926,6 +929,9 @@ function statusOf(g, sc) {
   return 'Activo';
 }
 const ST_CLS = { 'Activo':'s-activo','En lanzamiento':'s-lanz','En planeación':'s-plan','En desarrollo':'s-des','Concluido':'s-fin','Pausado':'s-pausa','Cancelado':'s-cancel' };
+const etapaOf = st => st === 'Activo' ? 'activos' : ['En lanzamiento','En planeación','En desarrollo'].includes(st) ? 'proximos' : 'historial';
+const ETAPA_N = { activos:'Activos', proximos:'Próximos', historial:'Historial' };
+const ST_DESC = 'En desarrollo: el programa sigue en diseño · En planeación: aún sin fecha de inicio · En lanzamiento: ya tiene fecha y está por iniciar · Activo: en clases · Concluido: ya terminó';
 const pill = (t, c) => `<span class="pill ${c}">${esc(t)}</span>`;
 const stPill = s => pill(s, ST_CLS[s] || 's-fin');
 
@@ -1263,11 +1269,11 @@ function newGenForm() {
 function vDiplomados() {
   // 3 etapas; dentro de "Por arrancar" e "Historial" hay un subfiltro por estatus
   const tabs = [
-    ['marcha','En marcha', x => x.st === 'Activo', []],
-    ['arrancar','Por arrancar', x => ['En lanzamiento','En planeación','En desarrollo'].includes(x.st), [['proximos','Próximos', x => ['En lanzamiento','En planeación'].includes(x.st)], ['desarrollo','En desarrollo', x => x.st === 'En desarrollo']]],
+    ['activos','Activos', x => x.st === 'Activo', []],
+    ['proximos','Próximos', x => ['En lanzamiento','En planeación','En desarrollo'].includes(x.st), [['lanzamiento','En lanzamiento', x => x.st === 'En lanzamiento'], ['planeacion','En planeación', x => x.st === 'En planeación'], ['desarrollo','En desarrollo', x => x.st === 'En desarrollo']]],
     ['historial','Historial', x => ['Concluido','Pausado','Cancelado'].includes(x.st), [['concluidos','Concluidos', x => x.st === 'Concluido'], ['pausados','Pausados', x => x.st === 'Pausado'], ['cancelados','Cancelados', x => x.st === 'Cancelado']]]];
-  const OLD = { activos:'marcha', proximos:'arrancar', desarrollo:'arrancar', concluidos:'historial', pausados:'historial', cancelados:'historial', todos:'marcha' };
-  if (OLD[ui.genTab]) { if (ui.genTab !== 'activos' && ui.genTab !== 'todos') ui.genSub = ui.genTab; ui.genTab = OLD[ui.genTab]; }
+  const OLD = { marcha:'activos', arrancar:'proximos', desarrollo:'proximos', concluidos:'historial', pausados:'historial', cancelados:'historial', todos:'activos' };
+  if (OLD[ui.genTab]) { if (['desarrollo','concluidos','pausados','cancelados'].includes(ui.genTab)) ui.genSub = ui.genTab; ui.genTab = OLD[ui.genTab]; }
   const t = tabs.find(t => t[0] === ui.genTab) || tabs[0];
   const subs = t[3].filter(([k, n, f]) => D.gens.some(f) || ui.genSub === k);
   const sub = subs.find(s => s[0] === ui.genSub);
@@ -1558,8 +1564,10 @@ function vGen(id) {
   const others = D.gens.filter(o => o.id !== id && (o.g.modulos || []).length).sort((a, b) => (a.g.programaId === g.programaId ? 0 : 1) - (b.g.programaId === g.programaId ? 0 : 1) || (b.sc.inicio || '').localeCompare(a.sc.inicio || ''));
   const orgs = Object.entries(S.orgs).filter(([, o]) => (o.programas || []).includes(g.programaId) || o.todos);
   const mods = x.sc.mods;
-  return `<div class="head"><div><div class="crumb"><a href="#diplomados">Diplomados</a> / ${esc(x.nombre)}</div><h1>${esc(x.nombre)} <span class="gbadge" style="font-size:16px;vertical-align:4px">Generación ${x.gen}</span>${colabStrip(g, 30)}</h1>
-    <p>${stPill(x.st)} ${canWrite ? `<select class="stsel" title="Cambiar estatus" ${b('estatusManual', 'opt')}><option value="">${ST_MAN.includes(g.estatusManual) ? 'Volver a automático' : 'Cambiar estatus ▾'}</option>${ST_MAN.filter(v => v !== x.st || ST_MAN.includes(g.estatusManual)).map(v => `<option value="${v}" ${g.estatusManual === v ? 'selected' : ''}>${v}${g.estatusManual === v ? ' (a mano)' : ''}</option>`).join('')}</select>` : ''} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
+  return `<div class="head"><div><div class="crumb"><a href="#diplomados" data-etapa="activos">Diplomados</a> / <a href="#diplomados" data-etapa="${etapaOf(x.st)}">${ETAPA_N[etapaOf(x.st)]}</a> / ${esc(x.nombre)}</div><h1>${esc(x.nombre)} <span class="gbadge" style="font-size:16px;vertical-align:4px">Generación ${x.gen}</span>${colabStrip(g, 30)}</h1>
+    <p>${canWrite ? (() => { const auto = statusOf(Object.assign({}, g, { estatusManual:'' }), x.sc), man = ST_MAN.includes(g.estatusManual);
+        const o = v => `<option value="${v}" ${g.estatusManual === v ? 'selected' : ''}>${v}${g.estatusManual === v ? ' · fijado a mano' : ''}</option>`;
+        return `<select class="stpick ${ST_CLS[x.st] || 's-fin'}" title="${ST_DESC}" aria-label="Estatus" ${b('estatusManual', 'opt')}><option value="" ${man ? '' : 'selected'}>${man ? 'Volver a automático (' + auto + ')' : auto + ' · automático'}</option><optgroup label="Activos">${o('Activo')}</optgroup><optgroup label="Próximos">${['En lanzamiento','En planeación','En desarrollo'].map(o).join('')}</optgroup><optgroup label="Historial">${['Pausado','Cancelado'].map(o).join('')}</optgroup></select>`; })() : stPill(x.st)} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
     <div class="tools">${x.sc.all.length ? `<button class="btn" data-act="cal-pdf" data-id="${id}" title="Calendario para alumnos, listo para guardar en PDF">Calendario PDF</button>` : ''}<a class="btn" href="#pr-${g.programaId}">Ver programa</a><button class="btn danger w" data-act="del" data-col="generaciones" data-id="${id}">Eliminar generación</button></div></div>
   ${x.missing.length && !['Concluido','Pausado','Cancelado'].includes(x.st) ? `<div class="note"><b>Falta:</b> ${esc(x.missing.join(' · '))}</div>` : ''}
   <section class="card pad sec gtop">
@@ -2466,6 +2474,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('focusout', () => { setTimeout(() => { if (dirty && !($('#view').contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) render(); }, 50); });
 document.addEventListener('click', async e => {
+  const etL = e.target.closest('[data-etapa]'); if (etL) { ui.genTab = etL.dataset.etapa; ui.genSub = ''; }
   const goEl = e.target.closest('[data-go]'); const a = e.target.closest('[data-act]'); const tab = e.target.closest('[data-tab]');
   if (tab) { if (ui.genTab !== tab.dataset.tab) ui.genSub = ''; ui.genTab = tab.dataset.tab; render(); return; }
   const subB = e.target.closest('[data-sub]'); if (subB) { ui.genSub = subB.dataset.sub; render(); return; }
