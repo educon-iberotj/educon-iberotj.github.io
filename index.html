@@ -538,6 +538,11 @@ details summary{cursor:pointer}
 .seg button.on{background:var(--fg);color:var(--bg)}
 .seg button em{font-style:normal;font-size:12px;opacity:.6;font-variant-numeric:tabular-nums}
 .seg button.cero{opacity:.55}
+.subseg{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;padding:6px 4px 2px;border-top:1px solid var(--line2)}
+.subseg button{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:3px 11px;font-size:12.5px;font-weight:600;color:var(--fg2);cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.subseg button:hover{border-color:var(--fg2)}
+.subseg button.on{background:var(--line2);border-color:var(--fg2);color:var(--fg)}
+.subseg button em{font-style:normal;opacity:.6;font-variant-numeric:tabular-nums}
 .seg.ico{background:var(--line2);border-radius:8px;padding:2px}
 .seg.ico button{padding:5px 8px}
 .seg.ico button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
@@ -874,7 +879,7 @@ const PALETA = ['#F2A7AE','#F5C38E','#E9DE8A','#A9DDB0','#9FC3EE','#C7B2EC','#F0
 const S = { programas:{}, gens:{}, profes:{}, orgs:{}, inter:{}, tareas:{}, preguntas:{}, alumnos:{}, asist:{}, precios:null, inh:{ lista:[] }, loaded:new Set() };
 let db = null, user = null, myId = null, canWrite = true, dirty = false, ROL = 'admin';
 const edInhOk = () => canWrite && ['admin','coordinacion'].includes(ROL);
-const ui = { genTab:'activos', q:'', calMes:null, calProg:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'programa', genArea:'' };
+const ui = { genTab:'marcha', genSub:'', q:'', calMes:null, calProg:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'programa', genArea:'' };
 
 // ---------- motor de fechas ----------
 let inhSet = new Map();
@@ -1256,14 +1261,24 @@ function newGenForm() {
 }
 
 function vDiplomados() {
-  const tabs = [['activos','Activos', x => x.st === 'Activo'], ['proximos','Próximos', x => ['En lanzamiento','En planeación'].includes(x.st)], ['desarrollo','En desarrollo', x => x.st === 'En desarrollo'], ['concluidos','Concluidos', x => x.st === 'Concluido'], ['pausados','Pausados', x => x.st === 'Pausado'], ['cancelados','Cancelados', x => x.st === 'Cancelado'], ['todos','Todos', () => true]];
+  // 3 etapas; dentro de "Por arrancar" e "Historial" hay un subfiltro por estatus
+  const tabs = [
+    ['marcha','En marcha', x => x.st === 'Activo', []],
+    ['arrancar','Por arrancar', x => ['En lanzamiento','En planeación','En desarrollo'].includes(x.st), [['proximos','Próximos', x => ['En lanzamiento','En planeación'].includes(x.st)], ['desarrollo','En desarrollo', x => x.st === 'En desarrollo']]],
+    ['historial','Historial', x => ['Concluido','Pausado','Cancelado'].includes(x.st), [['concluidos','Concluidos', x => x.st === 'Concluido'], ['pausados','Pausados', x => x.st === 'Pausado'], ['cancelados','Cancelados', x => x.st === 'Cancelado']]]];
+  const OLD = { activos:'marcha', proximos:'arrancar', desarrollo:'arrancar', concluidos:'historial', pausados:'historial', cancelados:'historial', todos:'marcha' };
+  if (OLD[ui.genTab]) { if (ui.genTab !== 'activos' && ui.genTab !== 'todos') ui.genSub = ui.genTab; ui.genTab = OLD[ui.genTab]; }
   const t = tabs.find(t => t[0] === ui.genTab) || tabs[0];
+  const subs = t[3].filter(([k, n, f]) => D.gens.some(f) || ui.genSub === k);
+  const sub = subs.find(s => s[0] === ui.genSub);
+  if (!sub) ui.genSub = '';
+  const inTab = x => t[2](x) && (!sub || sub[2](x));
   const q = norm(ui.q);
-  const L0 = D.gens.filter(t[2]).filter(x => !q || norm(x.label + ' ' + (x.g.sede || '') + ' ' + areaOf(x)).includes(q));
+  const L0 = D.gens.filter(inTab).filter(x => !q || norm(x.label + ' ' + (x.g.sede || '') + ' ' + areaOf(x)).includes(q));
   const areas = [...new Set(L0.map(areaOf))].sort(areaSort);
   if (ui.genArea && !areas.includes(ui.genArea)) ui.genArea = '';
   let L = L0.filter(x => !ui.genArea || areaOf(x) === ui.genArea);
-  const desc = ui.genTab === 'concluidos' || ui.genTab === 'todos';
+  const desc = t[0] === 'historial';
   L.sort((a, b) => { const ka = a.sc.inicio || a.g.inicioTentativo || (desc ? '0000' : '9999'), kb = b.sc.inicio || b.g.inicioTentativo || (desc ? '0000' : '9999'); return desc ? kb.localeCompare(ka) : ka.localeCompare(kb); });
   if (ui.genGroup !== 'lista') { const first = {}; L.forEach((x, i) => { if (!(x.g.programaId in first)) first[x.g.programaId] = i; }); L.sort((a, b) => (ui.genGroup === 'area' ? areaSort(areaOf(a), areaOf(b)) : 0) || first[a.g.programaId] - first[b.g.programaId] || (desc ? b.gen - a.gen : a.gen - b.gen)); }
   const isArea = ui.genGroup === 'area';
@@ -1272,12 +1287,13 @@ function vDiplomados() {
     <div class="tools"><input type="search" id="q-gen" placeholder="Buscar diplomado o sede" value="${esc(ui.q)}" aria-label="Buscar"><button class="btn pri w" data-act="new-gen">+ Nueva generación</button></div></div>
   ${newGenForm()}
   <div class="fbar">
-    <div class="seg" role="tablist" aria-label="Estatus">${tabs.map(([k, n, f]) => { const c = D.gens.filter(f).length; return `<button class="${k === t[0] ? 'on' : ''}${!c && k !== t[0] ? ' cero' : ''}" data-tab="${k}">${n}<em>${c}</em></button>`; }).join('')}</div>
+    <div class="seg" role="tablist" aria-label="Etapa">${tabs.map(([k, n, f]) => { const c = D.gens.filter(f).length; return `<button role="tab" aria-selected="${k === t[0]}" class="${k === t[0] ? 'on' : ''}${!c && k !== t[0] ? ' cero' : ''}" data-tab="${k}">${n}<em>${c}</em></button>`; }).join('')}</div>
     <div class="fbar-r">
       <label class="fsel"><select data-gsel="genArea" aria-label="Área"><option value="">Todas las áreas (${L0.length})</option>${areas.map(a => `<option value="${esc(a)}" ${ui.genArea === a ? 'selected' : ''}>${esc(a)} (${L0.filter(x => areaOf(x) === a).length})</option>`).join('')}</select></label>
       <label class="fsel"><select data-gsel="genGroup" aria-label="Agrupar">${[['area','Agrupar por área'],['programa','Agrupar por programa'],['lista','Ordenar por fecha']].map(([v, n]) => `<option value="${v}" ${ui.genGroup === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <div class="seg ico" role="group" aria-label="Formato">${icos.map(([v, n, ic]) => `<button class="${genView() === v ? 'on' : ''}" data-act="gen-view" data-v="${v}" title="${n}" aria-label="Ver como ${n.toLowerCase()}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg></button>`).join('')}</div>
     </div>
+    ${subs.length > 1 ? `<div class="subseg" role="group" aria-label="Estatus">${[['', 'Todos', t[2]], ...subs].map(([k, n, f]) => `<button class="${(ui.genSub || '') === k ? 'on' : ''}" data-sub="${k}">${n}<em>${D.gens.filter(x => t[2](x) && f(x)).length}</em></button>`).join('')}</div>` : ''}
   </div>
   ${L.length ? `<div class="gwrap">${L.map((x, i) => {
       const k = y => ui.genGroup === 'area' ? areaOf(y) : ui.genGroup === 'programa' ? y.g.programaId : (y.sc.inicio || y.g.inicioTentativo || '').slice(0, 7);
@@ -2451,7 +2467,8 @@ document.addEventListener('input', e => {
 document.addEventListener('focusout', () => { setTimeout(() => { if (dirty && !($('#view').contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) render(); }, 50); });
 document.addEventListener('click', async e => {
   const goEl = e.target.closest('[data-go]'); const a = e.target.closest('[data-act]'); const tab = e.target.closest('[data-tab]');
-  if (tab) { ui.genTab = tab.dataset.tab; render(); return; }
+  if (tab) { if (ui.genTab !== tab.dataset.tab) ui.genSub = ''; ui.genTab = tab.dataset.tab; render(); return; }
+  const subB = e.target.closest('[data-sub]'); if (subB) { ui.genSub = subB.dataset.sub; render(); return; }
   if (!a && goEl && !e.target.closest('a,select,input,button:not([data-go])')) { go(goEl.dataset.go); return; }
   if (!a) return;
   const act = a.dataset.act, id = a.dataset.id;
