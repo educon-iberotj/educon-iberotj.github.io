@@ -915,15 +915,16 @@ function schedule(g) {
   const all = mods.flatMap(m => m.ses).sort();
   return { mods, all, inicio: all[0] || g.inicio || null, fin: all.length ? all[all.length - 1] : (g.finManual || null) };
 }
-const ST_MAN = ['En desarrollo','En planeación','En lanzamiento','Activo','Pausado','Cancelado'];
+const ST_MAN = ['En desarrollo','En lanzamiento','Activo','Pausado','Cancelado'];
 function statusOf(g, sc) {
   const p = S.programas[g.programaId] || {};
   const ini = sc.inicio, fin = sc.fin;
   const started = ini && ini <= TODAY;
   if (['Pausado','Cancelado'].includes(g.estatusManual)) return g.estatusManual;
   if (g.pausada || (p.oferta === 'Pausado' && !started)) return 'Pausado';
+  if (g.estatusManual === 'En planeación' && !(fin && TODAY > fin)) return 'En desarrollo'; // estatus anterior, ya se unió a En desarrollo
   if (ST_MAN.includes(g.estatusManual) && !(fin && TODAY > fin)) return g.estatusManual;
-  if (!ini) return p.oferta === 'En diseño' ? 'En desarrollo' : 'En planeación';
+  if (!ini) return 'En desarrollo';
   if (TODAY < ini) return 'En lanzamiento';
   if (fin && TODAY > fin) return 'Concluido';
   return 'Activo';
@@ -931,7 +932,7 @@ function statusOf(g, sc) {
 const ST_CLS = { 'Activo':'s-activo','En lanzamiento':'s-lanz','En planeación':'s-plan','En desarrollo':'s-des','Concluido':'s-fin','Pausado':'s-pausa','Cancelado':'s-cancel' };
 const etapaOf = st => st === 'Activo' ? 'activos' : ['En lanzamiento','En planeación','En desarrollo'].includes(st) ? 'proximos' : 'historial';
 const ETAPA_N = { activos:'Activos', proximos:'Próximos', historial:'Historial' };
-const ST_DESC = 'En desarrollo: el programa sigue en diseño · En planeación: aún sin fecha de inicio · En lanzamiento: ya tiene fecha y está por iniciar · Activo: en clases · Concluido: ya terminó';
+const ST_DESC = 'En desarrollo: en diseño o aún sin fecha de inicio · En lanzamiento: ya tiene fecha y está por iniciar · Activo: en clases · Concluido: ya terminó';
 const pill = (t, c) => `<span class="pill ${c}">${esc(t)}</span>`;
 const stPill = s => pill(s, ST_CLS[s] || 's-fin');
 
@@ -1202,7 +1203,7 @@ function vTablero() {
     <div class="tools"><button class="btn pri w" data-act="new-gen">+ Nueva generación</button></div></div>
   <div class="kp2">
     ${kpi2('play', 'Activos', cnt('Activo'), 'en curso hoy', '#diplomados', 'ok')}
-    ${kpi2('rocket', 'Arrancan en 90 días', proximos.length, `${cnt('En planeación')} más en planeación`, '#diplomados', 'info')}
+    ${kpi2('rocket', 'Arrancan en 90 días', proximos.length, `${cnt('En desarrollo')} más en desarrollo`, '#diplomados', 'info')}
     ${kpi2('users', 'Inscritos en próximos', `${sumIns}${sumMeta ? `<span class="k-de"> / ${sumMeta}</span>` : ''}`, sumMeta ? `<span class="k-bar"><i style="width:${Math.min(100, Math.round(sumIns / sumMeta * 100))}%"></i></span>` : 'captura metas e inscritos', '#alumnos', 'vino')}
     ${kpi2('money', `Vendido${ingEst ? ' (est.)' : ''}`, money(ingTot), `cobrado ${money(ingr.reduce((a, r) => a + r.cobrado, 0))} · por cobrar ${money(ingr.reduce((a, r) => a + r.porCobrar, 0))}`, '#cobranza', 'ok')}
     ${kpi2('check', 'Pendientes vencidos', late, late ? 'revísalos hoy' : 'todo al día', '#pendientes', late ? 'crit' : 'ok')}
@@ -1270,7 +1271,7 @@ function vDiplomados() {
   // 3 etapas; dentro de "Por arrancar" e "Historial" hay un subfiltro por estatus
   const tabs = [
     ['activos','Activos', x => x.st === 'Activo', []],
-    ['proximos','Próximos', x => ['En lanzamiento','En planeación','En desarrollo'].includes(x.st), [['lanzamiento','En lanzamiento', x => x.st === 'En lanzamiento'], ['planeacion','En planeación', x => x.st === 'En planeación'], ['desarrollo','En desarrollo', x => x.st === 'En desarrollo']]],
+    ['proximos','Próximos', x => ['En lanzamiento','En planeación','En desarrollo'].includes(x.st), [['lanzamiento','En lanzamiento', x => x.st === 'En lanzamiento'], ['desarrollo','En desarrollo', x => x.st === 'En desarrollo']]],
     ['historial','Historial', x => ['Concluido','Pausado','Cancelado'].includes(x.st), [['concluidos','Concluidos', x => x.st === 'Concluido'], ['pausados','Pausados', x => x.st === 'Pausado'], ['cancelados','Cancelados', x => x.st === 'Cancelado']]]];
   const OLD = { marcha:'activos', arrancar:'proximos', desarrollo:'proximos', concluidos:'historial', pausados:'historial', cancelados:'historial', todos:'activos' };
   if (OLD[ui.genTab]) { if (['desarrollo','concluidos','pausados','cancelados'].includes(ui.genTab)) ui.genSub = ui.genTab; ui.genTab = OLD[ui.genTab]; }
@@ -1567,7 +1568,7 @@ function vGen(id) {
   return `<div class="head"><div><div class="crumb"><a href="#diplomados" data-etapa="activos">Diplomados</a> / <a href="#diplomados" data-etapa="${etapaOf(x.st)}">${ETAPA_N[etapaOf(x.st)]}</a> / ${esc(x.nombre)}</div><h1>${esc(x.nombre)} <span class="gbadge" style="font-size:16px;vertical-align:4px">Generación ${x.gen}</span>${colabStrip(g, 30)}</h1>
     <p>${canWrite ? (() => { const auto = statusOf(Object.assign({}, g, { estatusManual:'' }), x.sc), man = ST_MAN.includes(g.estatusManual);
         const o = v => `<option value="${v}" ${g.estatusManual === v ? 'selected' : ''}>${v}${g.estatusManual === v ? ' · fijado a mano' : ''}</option>`;
-        return `<select class="stpick ${ST_CLS[x.st] || 's-fin'}" title="${ST_DESC}" aria-label="Estatus" ${b('estatusManual', 'opt')}><option value="" ${man ? '' : 'selected'}>${man ? 'Volver a automático (' + auto + ')' : auto + ' · automático'}</option><optgroup label="Activos">${o('Activo')}</optgroup><optgroup label="Próximos">${['En lanzamiento','En planeación','En desarrollo'].map(o).join('')}</optgroup><optgroup label="Historial">${['Pausado','Cancelado'].map(o).join('')}</optgroup></select>`; })() : stPill(x.st)} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
+        return `<select class="stpick ${ST_CLS[x.st] || 's-fin'}" title="${ST_DESC}" aria-label="Estatus" ${b('estatusManual', 'opt')}><option value="" ${man ? '' : 'selected'}>${man ? 'Volver a automático (' + auto + ')' : auto + ' · automático'}</option><optgroup label="Activos">${o('Activo')}</optgroup><optgroup label="Próximos">${['En lanzamiento','En desarrollo'].map(o).join('')}</optgroup><optgroup label="Historial">${['Pausado','Cancelado'].map(o).join('')}</optgroup></select>`; })() : stPill(x.st)} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
     <div class="tools">${x.sc.all.length ? `<button class="btn" data-act="cal-pdf" data-id="${id}" title="Calendario para alumnos, listo para guardar en PDF">Calendario PDF</button>` : ''}<a class="btn" href="#pr-${g.programaId}">Ver programa</a><button class="btn danger w" data-act="del" data-col="generaciones" data-id="${id}">Eliminar generación</button></div></div>
   ${x.missing.length && !['Concluido','Pausado','Cancelado'].includes(x.st) ? `<div class="note"><b>Falta:</b> ${esc(x.missing.join(' · '))}</div>` : ''}
   <section class="card pad sec gtop">
