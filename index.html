@@ -723,7 +723,7 @@ tr.pint td{background:color-mix(in srgb,var(--warn) 6%,transparent)}
 .c2-d:hover{background:color-mix(in srgb,var(--fg) 4%,var(--panel))}
 .c2-d:focus-visible{outline:2px solid var(--rojo);outline-offset:-2px}
 .c2-d.sel{box-shadow:inset 0 0 0 2px var(--fg);background:color-mix(in srgb,var(--fg) 4%,var(--panel))}
-.c2-d.out{background:color-mix(in srgb,var(--fg) 3%,var(--panel))} .c2-d.out .n{color:var(--fg3);opacity:.7} .c2-d.out .c2-ev{opacity:.5}
+.c2-d.out{background:color-mix(in srgb,var(--fg) 6%,var(--panel))} .c2-d.nx.m1{box-shadow:inset 3px 0 0 var(--fg)} .c2-d.nx{border-top:3px solid var(--fg);margin-top:-3px} .c2-d .n:has(small){display:inline-flex;align-items:baseline;gap:4px} .c2-d .n small{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--fg2)} .c2-d.m1:not(.out) .n{color:var(--fg)} .c2-d.out .n{color:var(--fg3);opacity:.7} .c2-d.out .c2-ev{opacity:.5}
 .c2-d.inh{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--fg) 7%,var(--panel)) 0 7px,color-mix(in srgb,var(--fg) 13%,var(--panel)) 7px 9px)}
 .c2-d .n{align-self:flex-start;font-weight:700;font-size:15px;min-width:26px;height:24px;padding:0 4px;display:inline-grid;place-items:center;border-radius:4px;flex:none}
 .c2-d.hoy .n{background:var(--fg);color:var(--panel)} .c2-d.hoy{box-shadow:inset 0 3px 0 var(--fg)} .c2-d.hoy.sel{box-shadow:inset 0 3px 0 var(--fg),inset 0 0 0 2px var(--fg)}
@@ -1727,14 +1727,14 @@ function vCalendario() {
   if (!ui.calColor) ui.calColor = 'lugar';
   const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
   const [y, m] = ui.calMes.split('-').map(Number);
-  const first = new Date(y, m - 1, 1); const start = new Date(first); start.setDate(1 - first.getDay());
-  const days = []; for (let i = 0; i < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(ds(d)); }
+  const first = new Date(y, m - 1, 1); const start = new Date(first); start.setDate(1 - (first.getDay() + 6) % 7); // semana de lunes a domingo
+  const nextFirst = ds(new Date(y, m, 1)); const days = []; for (let i = 0; i < 49; i++) { const d = new Date(start); d.setDate(start.getDate() + i); const k = ds(d); if (i % 7 === 0 && days.length && days[days.length - 1] >= nextFirst) break; days.push(k); } // el mes + la semana donde empieza el siguiente
   const lugarDe = x => x.g.modalidad === 'En línea' || x.g.sede === 'En línea' ? 'En línea' : (x.g.sede || 'Sin sede');
   const enMes = x => x.st !== 'Cancelado' && x.sc.all.some(d => d.startsWith(ui.calMes));
   const LUG_BASE = ['Campus Río','Campus Playas','Coparmex','En línea'];
   const lugares = LUG_BASE.concat([...new Set(D.gens.filter(enMes).map(lugarDe))].filter(l => !LUG_BASE.includes(l)).sort());
   const lugN = l => l === 'Coparmex' ? 'COPARMEX' : l;
-  const COL_LUG = { 'Coparmex':'#2F6FB0', 'Campus Playas':'#E5202E', 'Campus Río':'#2E8B57', 'En línea':'#7B3FA0' };
+  const COL_LUG = { 'Coparmex':'#2B4C7E', 'Campus Playas':'#7D1F3A', 'Campus Río':'#4E6E5D', 'En línea':'#5E4A87' };
   const colLugar = l => COL_LUG[l] || (lugares.indexOf(l) % 2 ? '#5A6B7B' : '#C77700');
   const selL = lugares.includes(ui.calLugar) ? ui.calLugar : '';
   const salonDe2 = x => x.g.salon || 'Sin salón';
@@ -1759,8 +1759,8 @@ function vCalendario() {
   // vista del mes / lista / año
   let cuerpo = '';
   if (ui.calVista2 === 'mes') {
-    cuerpo = `<div class="c2-grid">${DIA.map(d => `<div class="c2-dh">${d}</div>`).join('')}${days.map(d => { const evs = delDia(d); const ih = inhSet.get(d); const dd = pd(d);
-      return `<div class="c2-d ${evs.length ? 'clase' : ''} ${d.slice(0, 7) !== ui.calMes ? 'out' : ''} ${ih ? 'inh' : ''} ${d === TODAY ? 'hoy' : ''} ${d === ui.calSel ? 'sel' : ''}" data-act="cal-day" data-v="${d}" role="button" tabindex="0" aria-label="${fdw(d)}, ${evs.length} clases"><span class="n">${dd.getDate()}</span>${ih && ih !== 'Descanso' ? `<span class="inhl">${esc(ih)}</span>` : ''}${evs.slice(0, 3).map(s => evChip(s)).join('')}${evs.length > 3 ? `<span class="c2-more">+${evs.length - 3} más</span>` : ''}</div>`; }).join('')}</div>
+    cuerpo = `<div class="c2-grid">${[1,2,3,4,5,6,0].map(i => `<div class="c2-dh">${DIA[i]}</div>`).join('')}${days.map(d => { const evs = delDia(d); const ih = inhSet.get(d); const dd = pd(d);
+      const mo = d.slice(0, 7) < ui.calMes ? 'pv' : d.slice(0, 7) > ui.calMes ? 'nx' : ''; return `<div class="c2-d ${evs.length ? 'clase' : ''} ${mo ? 'out ' + mo : ''} ${dd.getDate() === 1 ? 'm1' : ''} ${ih ? 'inh' : ''} ${d === TODAY ? 'hoy' : ''} ${d === ui.calSel ? 'sel' : ''}" data-act="cal-day" data-v="${d}" role="button" tabindex="0" aria-label="${fdw(d)}, ${evs.length} clases"><span class="n">${dd.getDate() === 1 ? `1 <small>${MES[dd.getMonth()]}</small>` : dd.getDate()}</span>${ih && ih !== 'Descanso' ? `<span class="inhl">${esc(ih)}</span>` : ''}${evs.slice(0, 3).map(s => evChip(s)).join('')}${evs.length > 3 ? `<span class="c2-more">+${evs.length - 3} más</span>` : ''}</div>`; }).join('')}</div>
       <div class="c2-leg">${ui.calColor === 'lugar' ? lugares.filter(l => LUG_BASE.includes(l) || D.gens.some(x => enMes(x) && lugarDe(x) === l)).map(l => `<span>${dot(colLugar(l))}${esc(lugN(l))}</span>`).join('') : ui.calColor === 'modulo' ? PALETA_MOD.slice(0, 6).map((c, i) => `<span>${dot(c)}Módulo ${['I','II','III','IV','V','VI'][i]}</span>`).join('') : '<span>Cada programa con su color</span>'}<span class="r">Clic en un día para ver el detalle</span></div>`;
   } else if (ui.calVista2 === 'lista') {
     const md = days.filter(d => d.startsWith(ui.calMes) && (delDia(d).length || (inhSet.get(d) && inhSet.get(d) !== 'Descanso')));
