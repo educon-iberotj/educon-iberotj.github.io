@@ -692,6 +692,69 @@ tr.pint td{background:color-mix(in srgb,var(--warn) 6%,transparent)}
 .ev{font-size:11.5px;line-height:1.25;padding:2px 5px;border-radius:4px;color:#1b1b1b;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:none;text-align:left;width:100%}
 .ev.conf{outline:2px solid var(--crit);outline-offset:-2px}
 .agenda{display:none}
+/* calendario v2 */
+.c2-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.c2-ib{width:36px;justify-content:center;padding:7px 0;border-radius:999px;font-size:17px;line-height:1}
+.c2-mes{font:600 22px/1.2 var(--f-disp);margin-left:6px;min-width:0}
+.c2-sp{flex:1}
+.c2-seg{display:inline-flex;background:var(--line2);border-radius:9px;padding:3px}
+.c2-seg button{font:inherit;font-weight:600;font-size:13px;border:0;background:transparent;color:var(--fg2);padding:5px 13px;border-radius:7px;cursor:pointer}
+.c2-seg button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.c2-fw{position:relative}
+.c2-badge{background:var(--rojo);color:#fff;border-radius:999px;font-size:11px;padding:0 6px;line-height:17px}
+.c2-pop{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.14);padding:14px;width:min(320px,calc(100vw - 32px));z-index:30;display:flex;flex-direction:column;gap:12px}
+.c2-pop h4{margin:0 0 6px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg3)}
+.c2-opts{display:flex;flex-wrap:wrap;gap:6px}
+.c2-opt{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--fg2);border-radius:999px;padding:4px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.c2-opt em{font-style:normal;color:var(--fg3);font-weight:500}
+.c2-opt.on{border-color:var(--fg);color:var(--fg);background:var(--line2)}
+.c2-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.c2-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.c2-pill{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 5px 3px 10px;font-size:13px;font-weight:600}
+.c2-pill button{border:0;background:var(--line2);color:var(--fg2);width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:10px;line-height:1}
+.c2-clr{border:0;background:none;color:var(--fg3);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.c2-main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start;margin-bottom:18px}
+.c2-main.solo{grid-template-columns:minmax(0,1fr)}
+@media (max-width:1000px){.c2-main{grid-template-columns:minmax(0,1fr)}}
+.c2-card{overflow:hidden;min-width:0;border-radius:14px}
+.c2-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.c2-dh{padding:9px 10px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--fg3);border-bottom:1px solid var(--line)}
+.c2-d{min-height:110px;padding:6px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);display:flex;flex-direction:column;gap:3px;cursor:pointer;min-width:0}
+.c2-d:nth-child(7n){border-right:0}
+.c2-d:hover{background:var(--line2)}
+.c2-d:focus-visible{outline:2px solid var(--rojo);outline-offset:-2px}
+.c2-d.sel{box-shadow:inset 0 0 0 2px var(--fg3);background:var(--line2)}
+.c2-d.out .n{color:var(--fg3);opacity:.6}
+.c2-d.sun{background:repeating-linear-gradient(135deg,transparent 0 7px,var(--line2) 7px 8px)}
+.c2-d.inh{background:var(--mute-bg)}
+.c2-d .n{font-weight:600;font-size:13px;width:24px;height:24px;display:inline-grid;place-items:center;border-radius:50%;flex:none}
+.c2-d.hoy .n{background:var(--rojo);color:#fff}
+.inhl{font-size:11px;color:var(--fg2);font-weight:600;line-height:1.2}
+.c2-ev{display:flex;gap:6px;align-items:baseline;font-size:12px;line-height:1.25;padding:3px 6px;border-radius:6px;border-left:3px solid var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--fg);overflow:hidden;white-space:nowrap;min-width:0}
+.c2-ev .t{color:var(--fg2);font-variant-numeric:tabular-nums;flex:none;font-weight:600}
+.c2-ev .nm{overflow:hidden;text-overflow:ellipsis}
+.c2-ev.conf{box-shadow:inset 0 0 0 1.5px var(--crit)}
+.c2-more{font-size:11.5px;color:var(--fg2);font-weight:600;padding-left:4px}
+.c2-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--fg2);padding:10px 14px;border-top:1px solid var(--line)}
+.c2-leg span{display:inline-flex;gap:6px;align-items:center} .c2-leg .r{margin-left:auto;color:var(--fg3)}
+.c2-side{padding:16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);border-radius:14px}
+.c2-sub{color:var(--fg3);font-size:13px;margin-top:-8px}
+.c2-cl{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.c2-cl .h{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.c2-cl .lug{font-size:12px;font-weight:600;color:var(--c)}
+.c2-cl .p{font-weight:600}
+.c2-cl .m{color:var(--fg2);font-size:13px}
+.c2-open{align-self:flex-start;border:0;background:none;padding:0;margin-top:3px;font:inherit;font-size:13px;font-weight:600;color:var(--rojo);cursor:pointer}
+.c2-open:hover{text-decoration:underline}
+.c2-list{display:flex;flex-direction:column}
+.c2-ld{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--line2)}
+.c2-ld.hoy .w{color:var(--rojo)}
+.c2-ld .w{font-weight:700} .c2-ld .w small{display:block;color:var(--fg3);font-weight:500}
+.c2-ld .items{display:flex;flex-direction:column;gap:6px;min-width:0}
+.c2-lk{text-decoration:none;color:inherit;min-width:0} .c2-lk .c2-ev{white-space:normal}
+.c2-list .empty{padding:16px}
+@media (max-width:640px){.c2-mes{font-size:19px}.c2-d{min-height:60px}.c2-ev .t{display:none}}
+
 .gantt{display:grid;grid-template-columns:200px minmax(0,1fr);font-size:13px}
 .gantt .gl{padding:5px 8px 5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--line2)}
 .gantt .gt{position:relative;border-bottom:1px solid var(--line2);background:repeating-linear-gradient(90deg,transparent 0 calc(100%/12 - 1px),var(--line2) calc(100%/12 - 1px) calc(100%/12))}
@@ -888,7 +951,7 @@ const PALETA = ['#F2A7AE','#F5C38E','#E9DE8A','#A9DDB0','#9FC3EE','#C7B2EC','#F0
 const S = { programas:{}, gens:{}, profes:{}, orgs:{}, inter:{}, tareas:{}, preguntas:{}, alumnos:{}, asist:{}, precios:null, inh:{ lista:[] }, loaded:new Set() };
 let db = null, user = null, myId = null, canWrite = true, dirty = false, ROL = 'admin';
 const edInhOk = () => canWrite && ['admin','coordinacion'].includes(ROL);
-const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', calLugar:'', calSalon:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'area', genArea:'' };
+const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', calLugar:'', calSalon:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'', genGroup:'area', genArea:'' };
 
 // ---------- motor de fechas ----------
 let inhSet = new Map();
@@ -1662,54 +1725,78 @@ function vGen(id) {
 
 function vCalendario() {
   if (!ui.calMes) ui.calMes = TODAY.slice(0, 7);
+  if (!ui.calVista2) ui.calVista2 = matchMedia('(max-width:720px)').matches ? 'lista' : 'mes';
+  if (!ui.calColor) ui.calColor = 'lugar';
+  const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
   const [y, m] = ui.calMes.split('-').map(Number);
   const first = new Date(y, m - 1, 1); const start = new Date(first); start.setDate(1 - first.getDay());
   const days = []; for (let i = 0; i < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(ds(d)); }
-  const vista = 'general'; // las vistas por sede/salón se sustituyeron por la fila «Dónde»
   const lugarDe = x => x.g.modalidad === 'En línea' || x.g.sede === 'En línea' ? 'En línea' : (x.g.sede || 'Sin sede');
   const enMes = x => x.st !== 'Cancelado' && x.sc.all.some(d => d.startsWith(ui.calMes));
   const LUG_BASE = ['Campus Río','Campus Playas','Coparmex','En línea'];
   const lugares = LUG_BASE.concat([...new Set(D.gens.filter(enMes).map(lugarDe))].filter(l => !LUG_BASE.includes(l)).sort());
   const lugN = l => l === 'Coparmex' ? 'COPARMEX' : l;
-  const PAL_LUG = ['#2F6FB0','#E5202E','#2E8B57','#7B3FA0','#C77700','#5A6B7B'];
   const COL_LUG = { 'Coparmex':'#2F6FB0', 'Campus Playas':'#E5202E', 'Campus Río':'#2E8B57', 'En línea':'#7B3FA0' };
-  const colLugar = l => COL_LUG[l] || PAL_LUG[4 + (lugares.indexOf(l) % 2)];
+  const colLugar = l => COL_LUG[l] || (lugares.indexOf(l) % 2 ? '#5A6B7B' : '#C77700');
   const selL = lugares.includes(ui.calLugar) ? ui.calLugar : '';
   const salonDe2 = x => x.g.salon || 'Sin salón';
   const salones = selL && selL !== 'En línea' ? [...new Set(D.gens.filter(x => enMes(x) && lugarDe(x) === selL).map(salonDe2))].sort() : [];
   const selS = salones.includes(ui.calSalon) ? ui.calSalon : '';
   const pasaLugar = x => (!selL || lugarDe(x) === selL) && (!selS || salonDe2(x) === selS);
-  const salonDe = x => lugarDe(x) === 'En línea' ? 'En línea' : `${(x.g.sede || 'Sin sede').replace('Campus ', '')} · ${x.g.salon || 'sin salón'}`;
-  const grupoDe = x => vista === 'sede' ? lugarDe(x) : vista === 'salon' ? salonDe(x) : '';
-  const gruposVis = vista === 'general' ? [] : [...new Set(D.gens.filter(x => x.sc.all.length && x.st !== 'Cancelado' && (x.sc.fin || '') >= `${ui.calMes}-01` && (x.sc.inicio || '') <= `${ui.calMes}-31`).map(grupoDe))].sort();
-  const PAL_L = ['#E5202E','#2F6FB0','#2E8B57','#C77700','#7B3FA0','#0F8C8C','#A0522D','#5A6B7B'];
-  const colGrupo = gname => PAL_L[[...new Set(D.gens.map(grupoDe))].sort().indexOf(gname) % PAL_L.length];
-  const selG = vista !== 'general' && gruposVis.includes(ui.calGrupo) ? ui.calGrupo : '';
-  const filt = s => (!ui.calProg || s.x.g.programaId === ui.calProg) && (!selG || grupoDe(s.x) === selG) && pasaLugar(s.x);
+  const filt = s => (!ui.calProg || s.x.g.programaId === ui.calProg) && pasaLugar(s.x);
   const evCol = s => ui.calColor === 'lugar' ? colLugar(lugarDe(s.x)) : ui.calColor === 'modulo' ? modCol(s.m.idx) : D.col[s.x.g.programaId];
-  const cells = days.map(d => { const evs = (D.byDay.get(d) || []).filter(filt); const ih = inhSet.get(d);
-    return `<div class="d ${d.slice(0, 7) !== ui.calMes ? 'out' : ''} ${ih ? 'inh' : ''} ${d === TODAY ? 'hoy' : ''}"><span class="dn">${pd(d).getDate()}</span>${ih ? `<span class="inhl">${esc(ih)}</span>` : ''}
-      ${evs.map(s => `<button class="ev ${s.conf ? 'conf' : ''}" style="background:${evCol(s)}" data-go="d-${s.gid}" title="${esc(s.x.label)} · Módulo ${s.m.idx + 1}${s.prof ? ' · ' + esc(profName(s.prof)) : ''}${s.conf ? ' · CHOQUE: el profesor tiene otra clase este día' : ''}">G${s.x.gen}·M${s.m.idx + 1} ${esc(s.x.nombre)}</button>`).join('')}</div>`; }).join('');
-  const monthDays = days.filter(d => d.slice(0, 7) === ui.calMes);
-  const agenda = monthDays.filter(d => (D.byDay.get(d) || []).some(filt) || (inhSet.get(d) && inhSet.get(d) !== 'Descanso')).map(d => `<div class="li"><div class="when">${fdw(d)}</div><div class="small" style="min-width:0">${inhSet.get(d) ? `<div class="muted">${esc(inhSet.get(d))}</div>` : ''}${(D.byDay.get(d) || []).filter(filt).map(s => `<div><a href="#d-${s.gid}"><span class="swatch" style="display:inline-block;margin:0 6px 0 0;background:${evCol(s)}"></span>${esc(s.x.nombre)}</a> · M${s.m.idx + 1}${s.conf ? ' <b style="color:var(--crit)">choque</b>' : ''}</div>`).join('')}</div></div>`).join('');
-  // gantt anual
-  const yr = y; const y0 = `${yr}-01-01`, y1 = `${yr}-12-31`; const span = daysBetween(y0, y1) + 1;
-  const rows = D.gens.filter(x => x.st !== 'Cancelado' && x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg) && (!selG || grupoDe(x) === selG) && pasaLugar(x)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
-  const nowPct = TODAY.slice(0, 4) == yr ? daysBetween(y0, TODAY) / span * 100 : null;
-  const gantt = rows.map(x => { const a = x.sc.inicio < y0 ? y0 : x.sc.inicio, b = x.sc.fin > y1 ? y1 : x.sc.fin; const l = daysBetween(y0, a) / span * 100, w = (daysBetween(a, b) + 1) / span * 100;
-    return `<div class="gl"><a href="#d-${x.id}">${esc(x.nombre)}</a> <span class="muted small">Gen ${x.gen}</span></div><div class="gt">${nowPct != null ? `<span class="now" style="left:${nowPct}%"></span>` : ''}<span class="gb" style="left:${l}%;width:${w}%;background:${D.col[x.g.programaId]}" title="${esc(x.label)}: ${fd(x.sc.inicio)} → ${fd(x.sc.fin)}"></span></div>`; }).join('');
+  const horaDe = s => horarioDe(s.x.g, s.d) || '';
+  const corto = h => { const p = h.split(/\s*[–—-]\s*/); if (!p[0]) return ''; const ap = /am|pm/i.test(p[0]) ? '' : ((p[1] || '').match(/am|pm/i) || [''])[0]; return (p[0].replace(':00', '') + ap).replace(/\s+/g, '').toLowerCase(); };
+  const delDia = d => (D.byDay.get(d) || []).filter(filt).sort((a, b) => horaDe(a).localeCompare(horaDe(b)));
+  if (!ui.calSel || !ui.calSel.startsWith(ui.calMes)) ui.calSel = TODAY.startsWith(ui.calMes) ? TODAY : (days.find(d => d.startsWith(ui.calMes) && delDia(d).length) || `${ui.calMes}-01`);
   const inhs = [...(S.inh.lista || [])].map((r, i) => ({ ...r, i })).sort((a, b) => (a.desde || '').localeCompare(b.desde || ''));
   const progsUsed = [...new Set(D.gens.filter(x => x.sc.all.length).map(x => x.g.programaId))].map(p => [p, (S.programas[p] || {}).nombre || p]).sort((a, b) => a[1].localeCompare(b[1]));
-  return `<div class="head"><div><h1>Calendario</h1><p>Todas las clases de todos los diplomados. Los días rayados son inhábiles según el calendario oficial IBERO; los domingos son de descanso.</p></div>
-    <div class="tools"><select class="in flt" id="cal-prog" style="width:auto" aria-label="Filtrar por programa"><option value="">Todos los programas</option>${progsUsed.map(([k, n]) => `<option value="${k}" ${ui.calProg === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
-    <button class="btn" data-act="cal" data-d="-1" aria-label="Mes anterior">←</button><b style="min-width:150px;text-align:center">${MESL[m - 1]} ${y}</b><button class="btn" data-act="cal" data-d="1" aria-label="Mes siguiente">→</button><button class="btn" data-act="cal" data-d="0" title="Ir al mes actual">Hoy</button></div></div>
-  <div class="tools"><span class="small muted">Dónde</span><div class="chips"><button class="chip ${!selL ? 'on' : ''}" data-act="cal-lugar" data-v="">Todos <span class="muted">${D.gens.filter(enMes).length}</span></button>${lugares.map(l => { const c = D.gens.filter(x => enMes(x) && lugarDe(x) === l).length; return `<button class="chip ${selL === l ? 'on' : ''}" data-act="cal-lugar" data-v="${esc(l)}" ${!c && selL !== l ? 'style="opacity:.55"' : ''}><span class="g-dot" style="background:${colLugar(l)};width:9px;height:9px;display:inline-block;margin-right:5px;vertical-align:0"></span>${esc(lugN(l))} <span class="muted">${c}</span></button>`; }).join('')}</div></div>
-  ${salones.length > 1 ? `<div class="tools"><span class="small muted">Salón</span><div class="chips"><button class="chip ${!selS ? 'on' : ''}" data-act="cal-salon" data-v="">Todos</button>${salones.map(n => `<button class="chip ${selS === n ? 'on' : ''}" data-act="cal-salon" data-v="${esc(n)}">${esc(n)} <span class="muted">${D.gens.filter(x => enMes(x) && lugarDe(x) === selL && salonDe2(x) === n).length}</span></button>`).join('')}</div></div>` : ''}
-  <div class="tools"><span class="small muted">Colorear por</span><div class="tabs">${[['programa','Programa'],['modulo','Módulo (como en Excel)'],['lugar','Lugar']].map(([v, t]) => `<button class="tab ${(ui.calColor || 'programa') === v ? 'on' : ''}" data-act="cal-color" data-v="${v}">${t}</button>`).join('')}</div>
-    ${ui.calColor === 'modulo' ? `<div class="chips">${PALETA_MOD.slice(0, 6).map((c, i) => `<span class="chip" style="cursor:default;background:${c};border-color:transparent;color:#1b1b1b">Módulo ${['I','II','III','IV','V','VI'][i]}</span>`).join('')}</div>` : ''}</div>
-  <div class="card" style="overflow:hidden"><div class="cal">${DIA.map(d => `<div class="dh">${d}</div>`).join('')}${cells}</div><div class="agenda list pad">${agenda || '<div class="empty">Sin clases este mes.</div>'}</div></div>
-  <section class="card pad sec"><div class="sec-h"><h2>Línea de tiempo ${yr}</h2><span class="small muted">${rows.length} generaciones</span></div>
-    <div class="gantt"><div></div><div class="gm">${MES.map(x => `<span>${x}</span>`).join('')}</div>${gantt || '<div></div><div class="muted small">Sin generaciones con fechas este año.</div>'}</div></section>
+  const dot = c => `<span class="c2-dot" style="background:${c}"></span>`;
+  const evChip = (s, full) => `<span class="c2-ev ${s.conf ? 'conf' : ''}" style="--c:${evCol(s)}" title="${esc(s.x.label)} · Módulo ${s.m.idx + 1}${s.prof ? ' · ' + esc(profName(s.prof)) : ''}${s.conf ? ' · CHOQUE: el profesor tiene otra clase este día' : ''}"><span class="t">${full ? esc(horaDe(s)) : corto(horaDe(s))}</span><span class="nm">M${s.m.idx + 1} ${esc(s.x.nombre)}${full && s.prof ? ' · ' + esc(profName(s.prof)) : ''}</span></span>`;
+  // filtros activos
+  const activos = [];
+  if (selL) activos.push(['lugar', lugN(selL), colLugar(selL)]);
+  if (selS) activos.push(['salon', selS]);
+  if (ui.calProg) activos.push(['prog', (S.programas[ui.calProg] || {}).nombre || ui.calProg]);
+  // vista del mes / lista / año
+  let cuerpo = '';
+  if (ui.calVista2 === 'mes') {
+    cuerpo = `<div class="c2-grid">${DIA.map(d => `<div class="c2-dh">${d}</div>`).join('')}${days.map(d => { const evs = delDia(d); const ih = inhSet.get(d); const dd = pd(d);
+      return `<div class="c2-d ${d.slice(0, 7) !== ui.calMes ? 'out' : ''} ${dd.getDay() === 0 ? 'sun' : ''} ${ih && ih !== 'Descanso' ? 'inh' : ''} ${d === TODAY ? 'hoy' : ''} ${d === ui.calSel ? 'sel' : ''}" data-act="cal-day" data-v="${d}" role="button" tabindex="0" aria-label="${fdw(d)}, ${evs.length} clases"><span class="n">${dd.getDate()}</span>${ih && ih !== 'Descanso' ? `<span class="inhl">${esc(ih)}</span>` : ''}${evs.slice(0, 3).map(s => evChip(s)).join('')}${evs.length > 3 ? `<span class="c2-more">+${evs.length - 3} más</span>` : ''}</div>`; }).join('')}</div>
+      <div class="c2-leg">${ui.calColor === 'lugar' ? lugares.filter(l => LUG_BASE.includes(l) || D.gens.some(x => enMes(x) && lugarDe(x) === l)).map(l => `<span>${dot(colLugar(l))}${esc(lugN(l))}</span>`).join('') : ui.calColor === 'modulo' ? PALETA_MOD.slice(0, 6).map((c, i) => `<span>${dot(c)}Módulo ${['I','II','III','IV','V','VI'][i]}</span>`).join('') : '<span>Cada programa con su color</span>'}<span class="r">Clic en un día para ver el detalle</span></div>`;
+  } else if (ui.calVista2 === 'lista') {
+    const md = days.filter(d => d.startsWith(ui.calMes) && (delDia(d).length || (inhSet.get(d) && inhSet.get(d) !== 'Descanso')));
+    cuerpo = `<div class="c2-list">${md.map(d => { const dd = pd(d); const ih = inhSet.get(d); return `<div class="c2-ld ${d === TODAY ? 'hoy' : ''}"><div class="w">${dd.getDate()} ${MES[dd.getMonth()]}<small>${DIA[dd.getDay()]}</small></div><div class="items">${ih && ih !== 'Descanso' ? `<span class="inhl">${esc(ih)}</span>` : ''}${delDia(d).map(s => `<a href="#d-${s.gid}" class="c2-lk">${evChip(s, true)}</a>`).join('')}</div></div>`; }).join('') || '<div class="empty">Sin clases este mes.</div>'}</div>`;
+  }
+  // gantt anual
+  const yr = y; const y0 = `${yr}-01-01`, y1 = `${yr}-12-31`; const span = daysBetween(y0, y1) + 1;
+  const rows = D.gens.filter(x => x.st !== 'Cancelado' && x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg) && pasaLugar(x)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
+  const nowPct = TODAY.slice(0, 4) == yr ? daysBetween(y0, TODAY) / span * 100 : null;
+  const gantt = rows.map(x => { const a = x.sc.inicio < y0 ? y0 : x.sc.inicio, b = x.sc.fin > y1 ? y1 : x.sc.fin; const l = daysBetween(y0, a) / span * 100, w = (daysBetween(a, b) + 1) / span * 100;
+    const c = ui.calColor === 'lugar' ? colLugar(lugarDe(x)) : D.col[x.g.programaId];
+    return `<div class="gl"><a href="#d-${x.id}">${esc(x.nombre)}</a> <span class="muted small">Gen ${x.gen}</span></div><div class="gt">${nowPct != null ? `<span class="now" style="left:${nowPct}%"></span>` : ''}<span class="gb" style="left:${l}%;width:${w}%;background:${c}" title="${esc(x.label)}: ${fd(x.sc.inicio)} → ${fd(x.sc.fin)}"></span></div>`; }).join('');
+  if (ui.calVista2 === 'anio') cuerpo = `<div class="pad"><div class="gantt"><div></div><div class="gm">${MES.map(x => `<span>${x}</span>`).join('')}</div>${gantt || '<div></div><div class="muted small">Sin generaciones con fechas este año.</div>'}</div></div>`;
+  // panel del día
+  const sd = ui.calSel, sevs = delDia(sd), sih = inhSet.get(sd);
+  const panel = `<h2>${cap(fdw(sd))}</h2><div class="c2-sub">${sih && sih !== 'Descanso' ? esc(sih) : sevs.length + (sevs.length === 1 ? ' clase' : ' clases')}</div>
+    ${sevs.length ? sevs.map(s => { const l = lugarDe(s.x); return `<div class="c2-cl" style="--c:${colLugar(l)}"><div class="h"><span>${esc(horaDe(s)) || 'Sin horario'}</span><span class="lug">${esc(lugN(l))}${l !== 'En línea' && s.x.g.salon ? ' · ' + esc(s.x.g.salon) : ''}</span></div><div class="p">${esc(s.x.nombre)} <span class="muted small">Gen ${s.x.gen}</span></div><div class="m">Módulo ${s.m.idx + 1}${s.m.nombre ? ' · ' + esc(s.m.nombre) : ''}</div><div class="m">${s.prof ? esc(profName(s.prof)) : '<span style="color:var(--crit)">Sin profesor</span>'}${s.conf ? ' · <b style="color:var(--crit)">choque de profesor</b>' : ''}</div><button class="c2-open" data-go="d-${s.gid}">Abrir diplomado →</button></div>`; }).join('') : `<div class="empty">${sih && sih !== 'Descanso' ? 'Día inhábil, sin clases.' : 'Sin clases este día.'}</div>`}`;
+  const tituloMes = ui.calVista2 === 'anio' ? String(y) : `${MESL[m - 1]} ${y}`;
+  return `<div class="head"><div><h1>Calendario</h1><p>Todas las clases de todos los diplomados. Los días sombreados son inhábiles según el calendario oficial IBERO.</p></div></div>
+  <div class="c2-bar">
+    <button class="btn" data-act="cal" data-d="0" title="Ir a hoy">Hoy</button>
+    <button class="btn c2-ib" data-act="cal" data-d="${ui.calVista2 === 'anio' ? -12 : -1}" aria-label="Anterior">‹</button><button class="btn c2-ib" data-act="cal" data-d="${ui.calVista2 === 'anio' ? 12 : 1}" aria-label="Siguiente">›</button>
+    <span class="c2-mes">${tituloMes}</span><span class="c2-sp"></span>
+    <div class="c2-seg" role="tablist" aria-label="Vista">${[['mes','Mes'],['lista','Lista'],['anio','Año']].map(([v, t]) => `<button role="tab" aria-selected="${ui.calVista2 === v}" class="${ui.calVista2 === v ? 'on' : ''}" data-act="cal-vista2" data-v="${v}">${t}</button>`).join('')}</div>
+    <div class="c2-fw"><button class="btn" data-act="cal-pop" aria-expanded="${!!ui.calPop}">Filtros${activos.length ? ` <span class="c2-badge">${activos.length}</span>` : ''}</button>
+      <div class="c2-pop" ${ui.calPop ? '' : 'hidden'}>
+        <div><h4>Lugar</h4><div class="c2-opts"><button class="c2-opt ${!selL ? 'on' : ''}" data-act="cal-lugar" data-v="">Todos</button>${lugares.map(l => { const c = D.gens.filter(x => enMes(x) && lugarDe(x) === l).length; return `<button class="c2-opt ${selL === l ? 'on' : ''}" data-act="cal-lugar" data-v="${esc(l)}">${dot(colLugar(l))}${esc(lugN(l))} <em>${c}</em></button>`; }).join('')}</div></div>
+        ${salones.length > 1 ? `<div><h4>Salón</h4><div class="c2-opts"><button class="c2-opt ${!selS ? 'on' : ''}" data-act="cal-salon" data-v="">Todos</button>${salones.map(n => `<button class="c2-opt ${selS === n ? 'on' : ''}" data-act="cal-salon" data-v="${esc(n)}">${esc(n)}</button>`).join('')}</div></div>` : ''}
+        <div><h4>Programa</h4><select class="in" id="cal-prog" aria-label="Filtrar por programa"><option value="">Todos los programas</option>${progsUsed.map(([k, n]) => `<option value="${k}" ${ui.calProg === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+        <div><h4>Colorear por</h4><div class="c2-opts">${[['lugar','Lugar'],['programa','Programa'],['modulo','Módulo']].map(([v, t]) => `<button class="c2-opt ${ui.calColor === v ? 'on' : ''}" data-act="cal-color" data-v="${v}">${t}</button>`).join('')}</div></div>
+      </div></div>
+  </div>
+  ${activos.length ? `<div class="c2-pills">${activos.map(([k, t, c]) => `<span class="c2-pill">${c ? dot(c) : ''}${esc(t)}<button data-act="cal-x" data-v="${k}" aria-label="Quitar filtro ${esc(t)}">✕</button></span>`).join('')}<button class="c2-clr" data-act="cal-x" data-v="todo">Quitar filtros</button></div>` : ''}
+  <div class="c2-main ${ui.calVista2 === 'mes' ? '' : 'solo'}"><div class="card c2-card">${cuerpo}</div>${ui.calVista2 === 'mes' ? `<aside class="card c2-side">${panel}</aside>` : ''}</div>
   <section class="card pad sec"><div class="sec-h"><h2>Días inhábiles</h2><span class="small muted">${esc(S.inh.fuente || '')}</span></div>
     ${edInhOk() ? '<div class="note small">Si agregas o quitas un día aquí, todas las fechas automáticas de los módulos se recorren solas.</div>' : ''}
     <div class="tbl-w"><table><thead><tr><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Tipo</th><th></th></tr></thead><tbody>
@@ -2495,6 +2582,7 @@ document.addEventListener('input', e => {
 document.addEventListener('focusout', () => { setTimeout(() => { if (dirty && !($('#view').contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) render(); }, 50); });
 document.addEventListener('click', async e => {
   const etL = e.target.closest('[data-etapa]'); if (etL) { ui.genTab = etL.dataset.etapa; ui.genSub = ''; }
+  if (ui.calPop && !e.target.closest('.c2-fw')) { ui.calPop = false; const pp = document.querySelector('.c2-pop'); if (pp) pp.hidden = true; }
   const goEl = e.target.closest('[data-go]'); const a = e.target.closest('[data-act]'); const tab = e.target.closest('[data-tab]');
   if (tab) { if (ui.genTab !== tab.dataset.tab) ui.genSub = ''; ui.genTab = tab.dataset.tab; render(); return; }
   const subB = e.target.closest('[data-sub]'); if (subB) { ui.genSub = subB.dataset.sub; render(); return; }
@@ -2518,7 +2606,7 @@ document.addEventListener('click', async e => {
   else if (act === 'unfix') { const g = G(); const m = g.modulos.find(m => m.id === a.dataset.m); m.clases = m.clases || (m.fijas || []).length || 4; m.fijas = null; save('generaciones', id, g, 'Ahora las fechas se calculan solas'); }
   else if (act === 'copy-mods') { const src = $('#copy-src').value; if (!src) { toast('Elige de qué generación copiar'); return; } const g = G(); const s = S.gens[src]; g.modulos = (g.modulos || []).concat((s.modulos || []).map(m => ({ id:uid('m'), nombre:m.nombre, profesorId:m.profesorId || null, estatusProfe:m.profesorId ? 'Por confirmar' : 'Sin asignar', alta:false, clases:m.clases || (m.fijas || []).length || 4, fijas:null, notas:'', pago:'' }))); if (!(g.dias || []).length) g.dias = [...(s.dias || [])]; if (!g.horario) g.horario = s.horario || ''; save('generaciones', id, g, `${(s.modulos || []).length} módulos copiados`); }
   else if (act === 'del') { if (!arm(a)) return; const col = a.dataset.col; await remove(col, id); if (col !== 'interacciones' && col !== 'preguntas' && !(col === 'tareas' && !route().startsWith('t-'))) go({ generaciones:'diplomados', profesores:'profesores', programas:'programas', organizaciones:'vinculacion', tareas:'pendientes', alumnos:'alumnos' }[col]); }
-  else if (act === 'cal') { const d = Number(a.dataset.d); if (!d) ui.calMes = TODAY.slice(0, 7); else { const [y, m] = ui.calMes.split('-').map(Number); const n = new Date(y, m - 1 + d, 1); ui.calMes = `${n.getFullYear()}-${pad(n.getMonth() + 1)}`; } render(); }
+  else if (act === 'cal') { const d = Number(a.dataset.d); if (!d) { ui.calMes = TODAY.slice(0, 7); ui.calSel = TODAY; } else { const [y, m] = ui.calMes.split('-').map(Number); const n = new Date(y, m - 1 + d, 1); ui.calMes = `${n.getFullYear()}-${pad(n.getMonth() + 1)}`; } render(); }
   else if (act === 'add-inh') { const a1 = $('#ih-a').value; if (!a1) { toast('Indica la fecha'); return; } const lista = clone(S.inh.lista || []); lista.push({ desde:a1, hasta:$('#ih-b').value || a1, motivo:$('#ih-m').value || 'Día inhábil', tipo:$('#ih-t').value }); saveInh(lista); }
   else if (act === 'del-inh') { if (!arm(a)) return; const lista = clone(S.inh.lista || []); lista.splice(Number(a.dataset.i), 1); saveInh(lista); }
   else if (act === 'new-prof') { const nid = uid('p'); await save('profesores', nid, { nombre:'Nuevo profesor', telefono:'', correo:'', licenciatura:'', maestria:'', doctorado:'', areas:'', experiencia:'', notas:'' }, 'Profesor creado'); go('p-' + nid); }
@@ -2587,6 +2675,10 @@ document.addEventListener('click', async e => {
   else if (act === 'eq-new-ok') { const nombre = $('#eqn-nom').value.trim(), email = $('#eqn-mail').value.trim(), rol = $('#eqn-rol').value, pw = $('#eqp-in').value; if (!email) { toast('Falta el correo'); return; } if (pw.length < 8) { toast('Contraseña de mínimo 8 caracteres'); return; } a.disabled = true; user.adminUsuarios({ accion:'crear', nombre, email, rol, password:pw }).then(() => { ui.eqNew = false; ui.eq = null; render(); copiar(`${email} / ${pw}`); toast(`Cuenta creada y copiada: ${email} / ${pw}`, 9000); }).catch(e => { a.disabled = false; toast('No se pudo: ' + e.message); }); }
   else if (act === 'cal-vista') { ui.calVista = a.dataset.v; ui.calGrupo = ''; render(); }
   else if (act === 'cal-grupo') { ui.calGrupo = a.dataset.v; render(); }
+  else if (act === 'cal-vista2') { ui.calVista2 = a.dataset.v; render(); }
+  else if (act === 'cal-pop') { ui.calPop = !ui.calPop; render(); }
+  else if (act === 'cal-day') { ui.calSel = a.dataset.v; if (!ui.calSel.startsWith(ui.calMes)) ui.calMes = ui.calSel.slice(0, 7); render(); }
+  else if (act === 'cal-x') { const v = a.dataset.v; if (v === 'lugar' || v === 'todo') { ui.calLugar = ''; ui.calSalon = ''; } if (v === 'salon') ui.calSalon = ''; if (v === 'prog' || v === 'todo') ui.calProg = ''; render(); }
   else if (act === 'cal-lugar') { ui.calLugar = a.dataset.v; ui.calSalon = ''; render(); }
   else if (act === 'cal-salon') { ui.calSalon = a.dataset.v; render(); }
   else if (act === 'cal-color') { ui.calColor = a.dataset.v; render(); }
