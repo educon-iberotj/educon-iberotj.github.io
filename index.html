@@ -888,7 +888,7 @@ const PALETA = ['#F2A7AE','#F5C38E','#E9DE8A','#A9DDB0','#9FC3EE','#C7B2EC','#F0
 const S = { programas:{}, gens:{}, profes:{}, orgs:{}, inter:{}, tareas:{}, preguntas:{}, alumnos:{}, asist:{}, precios:null, inh:{ lista:[] }, loaded:new Set() };
 let db = null, user = null, myId = null, canWrite = true, dirty = false, ROL = 'admin';
 const edInhOk = () => canWrite && ['admin','coordinacion'].includes(ROL);
-const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', calMod:'', calSede:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'area', genArea:'' };
+const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', calLugar:'', calSalon:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'area', genArea:'' };
 
 // ---------- motor de fechas ----------
 let inhSet = new Map();
@@ -1665,12 +1665,19 @@ function vCalendario() {
   const [y, m] = ui.calMes.split('-').map(Number);
   const first = new Date(y, m - 1, 1); const start = new Date(first); start.setDate(1 - first.getDay());
   const days = []; for (let i = 0; i < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(ds(d)); }
-  const vista = ui.calVista || 'general';
+  const vista = 'general'; // las vistas por sede/salón se sustituyeron por la fila «Dónde»
   const lugarDe = x => x.g.modalidad === 'En línea' || x.g.sede === 'En línea' ? 'En línea' : (x.g.sede || 'Sin sede');
-  const modDe = x => lugarDe(x) === 'En línea' ? 'En línea' : 'Presencial';
-  const sedeKey = x => { const t = norm(x.g.sede || ''); return t.includes('playa') ? 'playas' : t.includes('rio') ? 'rio' : t.includes('coparmex') ? 'coparmex' : ''; };
-  const SEDES = [['playas','Campus Playas'],['rio','Campus Río'],['coparmex','COPARMEX']];
-  const pasaLugar = x => (!ui.calMod || modDe(x) === ui.calMod) && (!ui.calSede || (modDe(x) === 'Presencial' && sedeKey(x) === ui.calSede));
+  const enMes = x => x.st !== 'Cancelado' && x.sc.all.some(d => d.startsWith(ui.calMes));
+  const LUG_BASE = ['Campus Río','Campus Playas','Coparmex','En línea'];
+  const lugares = LUG_BASE.concat([...new Set(D.gens.filter(enMes).map(lugarDe))].filter(l => !LUG_BASE.includes(l)).sort());
+  const lugN = l => l === 'Coparmex' ? 'COPARMEX' : l;
+  const PAL_LUG = ['#2F6FB0','#E5202E','#2E8B57','#7B3FA0','#C77700','#5A6B7B'];
+  const colLugar = l => PAL_LUG[lugares.indexOf(l) % PAL_LUG.length];
+  const selL = lugares.includes(ui.calLugar) ? ui.calLugar : '';
+  const salonDe2 = x => x.g.salon || 'Sin salón';
+  const salones = selL && selL !== 'En línea' ? [...new Set(D.gens.filter(x => enMes(x) && lugarDe(x) === selL).map(salonDe2))].sort() : [];
+  const selS = salones.includes(ui.calSalon) ? ui.calSalon : '';
+  const pasaLugar = x => (!selL || lugarDe(x) === selL) && (!selS || salonDe2(x) === selS);
   const salonDe = x => lugarDe(x) === 'En línea' ? 'En línea' : `${(x.g.sede || 'Sin sede').replace('Campus ', '')} · ${x.g.salon || 'sin salón'}`;
   const grupoDe = x => vista === 'sede' ? lugarDe(x) : vista === 'salon' ? salonDe(x) : '';
   const gruposVis = vista === 'general' ? [] : [...new Set(D.gens.filter(x => x.sc.all.length && x.st !== 'Cancelado' && (x.sc.fin || '') >= `${ui.calMes}-01` && (x.sc.inicio || '') <= `${ui.calMes}-31`).map(grupoDe))].sort();
@@ -1678,7 +1685,7 @@ function vCalendario() {
   const colGrupo = gname => PAL_L[[...new Set(D.gens.map(grupoDe))].sort().indexOf(gname) % PAL_L.length];
   const selG = vista !== 'general' && gruposVis.includes(ui.calGrupo) ? ui.calGrupo : '';
   const filt = s => (!ui.calProg || s.x.g.programaId === ui.calProg) && (!selG || grupoDe(s.x) === selG) && pasaLugar(s.x);
-  const evCol = s => vista !== 'general' ? colGrupo(grupoDe(s.x)) : ui.calColor === 'modulo' ? modCol(s.m.idx) : D.col[s.x.g.programaId];
+  const evCol = s => ui.calColor === 'lugar' ? colLugar(lugarDe(s.x)) : ui.calColor === 'modulo' ? modCol(s.m.idx) : D.col[s.x.g.programaId];
   const cells = days.map(d => { const evs = (D.byDay.get(d) || []).filter(filt); const ih = inhSet.get(d);
     return `<div class="d ${d.slice(0, 7) !== ui.calMes ? 'out' : ''} ${ih ? 'inh' : ''} ${d === TODAY ? 'hoy' : ''}"><span class="dn">${pd(d).getDate()}</span>${ih ? `<span class="inhl">${esc(ih)}</span>` : ''}
       ${evs.map(s => `<button class="ev ${s.conf ? 'conf' : ''}" style="background:${evCol(s)}" data-go="d-${s.gid}" title="${esc(s.x.label)} · Módulo ${s.m.idx + 1}${s.prof ? ' · ' + esc(profName(s.prof)) : ''}${s.conf ? ' · CHOQUE: el profesor tiene otra clase este día' : ''}">G${s.x.gen}·M${s.m.idx + 1} ${esc(s.x.nombre)}</button>`).join('')}</div>`; }).join('');
@@ -1694,13 +1701,11 @@ function vCalendario() {
   const progsUsed = [...new Set(D.gens.filter(x => x.sc.all.length).map(x => x.g.programaId))].map(p => [p, (S.programas[p] || {}).nombre || p]).sort((a, b) => a[1].localeCompare(b[1]));
   return `<div class="head"><div><h1>Calendario</h1><p>Todas las clases de todos los diplomados. Los días rayados son inhábiles según el calendario oficial IBERO; los domingos son de descanso.</p></div>
     <div class="tools"><select class="in flt" id="cal-prog" style="width:auto" aria-label="Filtrar por programa"><option value="">Todos los programas</option>${progsUsed.map(([k, n]) => `<option value="${k}" ${ui.calProg === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
-    <select class="in flt" id="cal-mod" style="width:auto" aria-label="Filtrar por modalidad"><option value="">Presencial y en línea</option>${['Presencial','En línea'].map(v => `<option value="${v}" ${ui.calMod === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
-    ${ui.calMod !== 'En línea' ? `<select class="in flt" id="cal-sede" style="width:auto" aria-label="Filtrar por sede"><option value="">Todas las sedes</option>${SEDES.map(([k, n]) => `<option value="${k}" ${ui.calSede === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
     <button class="btn" data-act="cal" data-d="-1" aria-label="Mes anterior">←</button><b style="min-width:150px;text-align:center">${MESL[m - 1]} ${y}</b><button class="btn" data-act="cal" data-d="1" aria-label="Mes siguiente">→</button><button class="btn" data-act="cal" data-d="0" title="Ir al mes actual">Hoy</button></div></div>
-  <div class="tools"><span class="small muted">Ver</span><div class="tabs">${[['general','General'],['sede','Por modalidad y sede'],['salon','Por salón']].map(([v, t]) => `<button class="tab ${vista === v ? 'on' : ''}" data-act="cal-vista" data-v="${v}">${t}</button>`).join('')}</div>
-    ${vista !== 'general' ? `<div class="chips"><button class="chip ${!selG ? 'on' : ''}" data-act="cal-grupo" data-v="">Todos</button>${gruposVis.map(gname => `<button class="chip ${selG === gname ? 'on' : ''}" data-act="cal-grupo" data-v="${esc(gname)}"><span class="g-dot" style="background:${colGrupo(gname)};width:9px;height:9px;display:inline-block;margin-right:5px;vertical-align:0"></span>${esc(gname)} <span class="muted">${D.gens.filter(x => grupoDe(x) === gname && x.sc.all.some(d => d.startsWith(ui.calMes))).length}</span></button>`).join('')}</div>` : ''}</div>
-  ${vista === 'general' ? `<div class="tools"><span class="small muted">Colorear por</span><div class="tabs"><button class="tab ${ui.calColor !== 'modulo' ? 'on' : ''}" data-act="cal-color" data-v="programa">Programa</button><button class="tab ${ui.calColor === 'modulo' ? 'on' : ''}" data-act="cal-color" data-v="modulo">Módulo (como en Excel)</button></div>
-    ${ui.calColor === 'modulo' ? `<div class="chips">${PALETA_MOD.slice(0, 6).map((c, i) => `<span class="chip" style="cursor:default;background:${c};border-color:transparent;color:#1b1b1b">Módulo ${['I','II','III','IV','V','VI'][i]}</span>`).join('')}</div>` : ''}</div>` : ''}
+  <div class="tools"><span class="small muted">Dónde</span><div class="chips"><button class="chip ${!selL ? 'on' : ''}" data-act="cal-lugar" data-v="">Todos <span class="muted">${D.gens.filter(enMes).length}</span></button>${lugares.map(l => { const c = D.gens.filter(x => enMes(x) && lugarDe(x) === l).length; return `<button class="chip ${selL === l ? 'on' : ''}" data-act="cal-lugar" data-v="${esc(l)}" ${!c && selL !== l ? 'style="opacity:.55"' : ''}><span class="g-dot" style="background:${colLugar(l)};width:9px;height:9px;display:inline-block;margin-right:5px;vertical-align:0"></span>${esc(lugN(l))} <span class="muted">${c}</span></button>`; }).join('')}</div></div>
+  ${salones.length > 1 ? `<div class="tools"><span class="small muted">Salón</span><div class="chips"><button class="chip ${!selS ? 'on' : ''}" data-act="cal-salon" data-v="">Todos</button>${salones.map(n => `<button class="chip ${selS === n ? 'on' : ''}" data-act="cal-salon" data-v="${esc(n)}">${esc(n)} <span class="muted">${D.gens.filter(x => enMes(x) && lugarDe(x) === selL && salonDe2(x) === n).length}</span></button>`).join('')}</div></div>` : ''}
+  <div class="tools"><span class="small muted">Colorear por</span><div class="tabs">${[['programa','Programa'],['modulo','Módulo (como en Excel)'],['lugar','Lugar']].map(([v, t]) => `<button class="tab ${(ui.calColor || 'programa') === v ? 'on' : ''}" data-act="cal-color" data-v="${v}">${t}</button>`).join('')}</div>
+    ${ui.calColor === 'modulo' ? `<div class="chips">${PALETA_MOD.slice(0, 6).map((c, i) => `<span class="chip" style="cursor:default;background:${c};border-color:transparent;color:#1b1b1b">Módulo ${['I','II','III','IV','V','VI'][i]}</span>`).join('')}</div>` : ''}</div>
   <div class="card" style="overflow:hidden"><div class="cal">${DIA.map(d => `<div class="dh">${d}</div>`).join('')}${cells}</div><div class="agenda list pad">${agenda || '<div class="empty">Sin clases este mes.</div>'}</div></div>
   <section class="card pad sec"><div class="sec-h"><h2>Línea de tiempo ${yr}</h2><span class="small muted">${rows.length} generaciones</span></div>
     <div class="gantt"><div></div><div class="gm">${MES.map(x => `<span>${x}</span>`).join('')}</div>${gantt || '<div></div><div class="muted small">Sin generaciones con fechas este año.</div>'}</div></section>
@@ -2477,8 +2482,6 @@ document.addEventListener('change', e => {
     const [tipo, vid] = el.value.split(':'); taskPatch(el.dataset.tv, t => { t.vinculo = vid ? { tipo, id:vid } : null; }, 'Guardado');
   } else if (el.id === 't-mine') { ui.tMine = el.checked; render(); }
   else if (el.id === 'cal-prog') { ui.calProg = el.value; render(); }
-  else if (el.id === 'cal-mod') { ui.calMod = el.value; if (el.value === 'En línea') ui.calSede = ''; render(); }
-  else if (el.id === 'cal-sede') { ui.calSede = el.value; if (el.value) ui.calMod = 'Presencial'; render(); }
   else if (el.id === 'f-etapa') { ui.orgEtapa = el.value; render(); }
   else if (el.id === 'f-prior') { ui.orgPrior = el.value; render(); }
   else if (el.id === 'f-prog') { ui.orgProg = el.value; render(); }
@@ -2583,6 +2586,8 @@ document.addEventListener('click', async e => {
   else if (act === 'eq-new-ok') { const nombre = $('#eqn-nom').value.trim(), email = $('#eqn-mail').value.trim(), rol = $('#eqn-rol').value, pw = $('#eqp-in').value; if (!email) { toast('Falta el correo'); return; } if (pw.length < 8) { toast('Contraseña de mínimo 8 caracteres'); return; } a.disabled = true; user.adminUsuarios({ accion:'crear', nombre, email, rol, password:pw }).then(() => { ui.eqNew = false; ui.eq = null; render(); copiar(`${email} / ${pw}`); toast(`Cuenta creada y copiada: ${email} / ${pw}`, 9000); }).catch(e => { a.disabled = false; toast('No se pudo: ' + e.message); }); }
   else if (act === 'cal-vista') { ui.calVista = a.dataset.v; ui.calGrupo = ''; render(); }
   else if (act === 'cal-grupo') { ui.calGrupo = a.dataset.v; render(); }
+  else if (act === 'cal-lugar') { ui.calLugar = a.dataset.v; ui.calSalon = ''; render(); }
+  else if (act === 'cal-salon') { ui.calSalon = a.dataset.v; render(); }
   else if (act === 'cal-color') { ui.calColor = a.dataset.v; render(); }
   else if (act === 'f-clear') { ui.orgEtapa = ui.orgPrior = ui.orgProg = ui.orgQ = ''; render(); }
 });
