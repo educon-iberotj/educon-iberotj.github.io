@@ -731,7 +731,7 @@ tr.pint td{background:color-mix(in srgb,var(--warn) 6%,transparent)}
 .c2-ev{display:flex;gap:6px;align-items:baseline;font-size:12.5px;line-height:1.25;padding:3px 6px;border-radius:4px;background:var(--c);color:#fff;font-weight:600;overflow:hidden;white-space:nowrap;min-width:0;box-shadow:0 1px 0 color-mix(in srgb,var(--c) 60%,#000)}
 .c2-ev .t{color:#fff;opacity:.8;font-variant-numeric:tabular-nums;flex:none;font-weight:700}
 .c2-ev .nm{overflow:hidden;text-overflow:ellipsis}
-.c2-ev.conf{outline:2px solid var(--crit);outline-offset:1px}
+.c2-ev.conf{outline:2px solid #E8A317;outline-offset:1px}
 .c2-more{font-size:11.5px;color:var(--fg2);font-weight:600;padding-left:4px}
 .c2-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--fg2);padding:10px 14px;border-top:1px solid var(--line)}
 .c2-leg span{display:inline-flex;gap:6px;align-items:center} .c2-leg .r{margin-left:auto;color:var(--fg3)}
@@ -921,6 +921,14 @@ function durHora(t) {
   if (!m[3] && m[6] && m[6][0].toLowerCase() === 'p' && a < 12 && a + 12 < b) a += 12;
   const d = b - a; return d > 0 && d <= 12 ? Math.round(d * 100) / 100 : null;
 }
+// inicio y fin (horas decimales) de un texto de horario como "6:00–8:00 pm"; null si no se entiende
+function rangoHora(t) {
+  const m = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.)?\s*(?:[–—-]|a)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.)?/i.exec(t || ''); if (!m) return null;
+  const cv = (h, mi, ap) => { h = +h; const p = ap ? ap[0].toLowerCase() : ''; if (p === 'p' && h < 12) h += 12; if (p === 'a' && h === 12) h = 0; return h + (+mi || 0) / 60; };
+  const b = cv(m[4], m[5], m[6]); let a = cv(m[1], m[2], m[3]);
+  if (!m[3] && m[6] && m[6][0].toLowerCase() === 'p' && a < 12 && a + 12 < b) a += 12;
+  return b > a ? [a, b] : null;
+}
 function horasSes(g, ses) {
   if (!ses.length) return null; let t = 0;
   for (const d of ses) { const h = durHora(horarioDe(g, d)); if (h == null) return null; t += h; }
@@ -1040,14 +1048,20 @@ function derive() {
   for (const x of gens) for (const m of x.sc.mods) m.ses.forEach((d, k) => ses.push({ d, gid:x.id, x, m, k, prof:m.profesorId }));
   ses.sort((a, b) => a.d.localeCompare(b.d));
   const byDay = new Map(); for (const s of ses) { if (!byDay.has(s.d)) byDay.set(s.d, []); byDay.get(s.d).push(s); }
-  const conflicts = [];
+  const conflicts = [], salonConflicts = [];
   for (const [d, arr] of byDay) {
     const bp = {}; for (const s of arr) if (s.prof) (bp[s.prof] = bp[s.prof] || []).push(s);
     for (const [pid, a] of Object.entries(bp)) if (a.length > 1 && new Set(a.map(s => s.gid)).size > 1) { a.forEach(s => s.conf = true); conflicts.push({ d, pid, a }); }
+    // mismo salón el mismo día con horarios que se enciman (presencial y con salón capturado)
+    const bs = {}; for (const s of arr) { const g = s.x.g; if (g.modalidad === 'En línea' || g.sede === 'En línea' || !g.salon || !g.sede || s.x.st === 'Cancelado') continue; const k = norm(g.sede) + '|' + norm(g.salon); (bs[k] = bs[k] || []).push(s); }
+    for (const a of Object.values(bs)) { if (new Set(a.map(s => s.gid)).size < 2) continue;
+      for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) { const p = a[i], q = a[j]; if (p.gid === q.gid) continue;
+        const rp = rangoHora(horarioDe(p.x.g, d)), rq = rangoHora(horarioDe(q.x.g, d));
+        if (!rp || !rq || (rp[0] < rq[1] && rq[0] < rp[1])) { p.confSalon = q.x; q.confSalon = p.x; salonConflicts.push({ d, sede:p.x.g.sede, salon:p.x.g.salon, a:[p, q] }); } } }
   }
   const inhHits = ses.filter(s => !s.m.auto && inhSet.has(s.d) && s.d >= TODAY);
   const lastContact = {}; for (const i of Object.values(S.inter)) if (!lastContact[i.orgId] || i.fecha > lastContact[i.orgId]) lastContact[i.orgId] = i.fecha;
-  D = { gens, byId:Object.fromEntries(gens.map(x => [x.id, x])), col, ses, byDay, conflicts, inhHits, lastContact };
+  D = { gens, byId:Object.fromEntries(gens.map(x => [x.id, x])), col, ses, byDay, conflicts, salonConflicts, inhHits, lastContact };
   deriveAlumnos();
 }
 
@@ -1224,6 +1238,7 @@ function atiende() {
   if (atr.length) A.push({ sev:1, d:TODAY, t:`<b>${atr.length} alumnos atrasados en sus pagos</b> · ${money(atr.reduce((s, a) => s + cobro(a).atraso, 0))} vencido`, h:'cobranza' });
   for (const [id, t] of Object.entries(S.tareas || {})) if (t.estado !== 'Completada' && t.vence && t.vence < TODAY) A.push({ sev:2, d:t.vence, t:`<b>Pendiente vencido:</b> ${esc(t.titulo || 'Sin título')} · venció el ${fd(t.vence, false)}`, h:'t-' + id });
   for (const c of D.conflicts.filter(c => c.d >= TODAY && c.d <= addDays(TODAY, 60))) A.push({ sev:3, d:c.d, t:`<b>Choque:</b> ${esc(profName(c.pid))} tiene clase en ${c.a.map(s => esc(s.x.nombre)).join(' y ')} el ${fdw(c.d)}`, h:'d-' + c.a[0].gid });
+  for (const c of D.salonConflicts.filter(c => c.d >= TODAY && c.d <= addDays(TODAY, 60))) A.push({ sev:3, d:c.d, t:`<b>Choque de salón:</b> ${esc(c.salon)} (${esc(c.sede.replace('Campus ', ''))}) lo usan ${c.a.map(s => esc(s.x.nombre)).join(' y ')} el ${fdw(c.d)}`, h:'d-' + c.a[0].gid });
   for (const s of D.inhHits.filter(s => s.d <= addDays(TODAY, 60))) A.push({ sev:2, d:s.d, t:`<b>Clase en día inhábil:</b> ${esc(s.x.nombre)} ${genB(s.x)}, módulo ${s.m.idx + 1}, el ${fdw(s.d)} (${esc(inhSet.get(s.d))})`, h:'d-' + s.gid });
   for (const [id, o] of Object.entries(S.orgs)) {
     if (!['Estratégica','Alta'].includes(o.prioridad) || !['En contacto','En negociación','Colaboración activa'].includes(o.etapa)) continue;
@@ -1637,6 +1652,7 @@ function vGen(id) {
         const o = v => `<option value="${v}" ${g.estatusManual === v ? 'selected' : ''}>${v}${g.estatusManual === v ? ' · fijado a mano' : ''}</option>`;
         return `<select class="stpick ${ST_CLS[x.st] || 's-fin'}" title="${ST_DESC}" aria-label="Estatus" ${b('estatusManual', 'opt')}><option value="" ${man ? '' : 'selected'}>${man ? 'Volver a automático (' + auto + ')' : auto + ' · automático'}</option><optgroup label="Activos">${o('Activo')}</optgroup><optgroup label="Próximos">${['En lanzamiento','En desarrollo'].map(o).join('')}</optgroup><optgroup label="Historial">${['Pausado','Cancelado'].map(o).join('')}</optgroup></select>`; })() : stPill(x.st)} &nbsp;${esc(g.etiqueta || '')} · ${x.sc.inicio ? fd(x.sc.inicio) + ' → ' + fd(x.sc.fin) : 'sin fecha de inicio'} ${g.actualizadoEn ? `<span class="small muted">· editado ${ago(g.actualizadoEn)} por ${whoEl(g.actualizadoPor)}</span>` : ''}</p></div>
     <div class="tools">${x.sc.all.length ? `<button class="btn" data-act="cal-pdf" data-id="${id}" title="Calendario para alumnos, listo para guardar en PDF">Calendario PDF</button>` : ''}<a class="btn" href="#pr-${g.programaId}">Ver programa</a><button class="btn danger w" data-act="del" data-col="generaciones" data-id="${id}">Eliminar generación</button></div></div>
+  ${(() => { const cs = D.salonConflicts.filter(c => c.d >= TODAY && c.a.some(s => s.gid === id)); return cs.length ? `<div class="warn-box"><b>Choque de salón:</b> ${cs.slice(0, 4).map(c => { const o = c.a.find(s => s.gid !== id); return `${fdw(c.d)} · ${esc(c.salon)} también lo usa <a href="#d-${o.gid}">${esc(o.x.nombre)}</a>`; }).join('; ')}${cs.length > 4 ? ` y ${cs.length - 4} días más` : ''}. Cambia el salón o el horario.</div>` : ''; })()}
   ${x.missing.length && !['Concluido','Pausado','Cancelado'].includes(x.st) ? `<div class="note"><b>Falta:</b> ${esc(x.missing.join(' · '))}</div>` : ''}
   <section class="card pad sec gtop">
     <div class="gt-c"><div class="gt-h">Colaboración</div>
@@ -1750,7 +1766,7 @@ function vCalendario() {
   const inhs = [...(S.inh.lista || [])].map((r, i) => ({ ...r, i })).sort((a, b) => (a.desde || '').localeCompare(b.desde || ''));
   const progsUsed = [...new Set(D.gens.filter(x => x.sc.all.length).map(x => x.g.programaId))].map(p => [p, (S.programas[p] || {}).nombre || p]).sort((a, b) => a[1].localeCompare(b[1]));
   const dot = c => `<span class="c2-dot" style="background:${c}"></span>`;
-  const evChip = (s, full) => `<span class="c2-ev ${s.conf ? 'conf' : ''}" style="--c:${evCol(s)}" title="${esc(s.x.label)} · Módulo ${s.m.idx + 1}${s.prof ? ' · ' + esc(profName(s.prof)) : ''}${s.conf ? ' · CHOQUE: el profesor tiene otra clase este día' : ''}"><span class="t">${full ? esc(horaDe(s)) : corto(horaDe(s))}</span><span class="nm">M${s.m.idx + 1} ${esc(s.x.nombre)}${full && s.prof ? ' · ' + esc(profName(s.prof)) : ''}</span></span>`;
+  const evChip = (s, full) => `<span class="c2-ev ${s.conf || s.confSalon ? 'conf' : ''}" style="--c:${evCol(s)}" title="${esc(s.x.label)} · Módulo ${s.m.idx + 1}${s.prof ? ' · ' + esc(profName(s.prof)) : ''}${s.conf ? ' · CHOQUE: el profesor tiene otra clase este día' : ''}${s.confSalon ? ' · CHOQUE DE SALÓN con ' + esc(s.confSalon.nombre) : ''}">${s.conf || s.confSalon ? '⚠ ' : ''}<span class="t">${full ? esc(horaDe(s)) : corto(horaDe(s))}</span><span class="nm">M${s.m.idx + 1} ${esc(s.x.nombre)}${full && s.prof ? ' · ' + esc(profName(s.prof)) : ''}</span></span>`;
   // filtros activos
   const activos = [];
   if (selL) activos.push(['lugar', lugN(selL), colLugar(selL)]);
@@ -1777,7 +1793,7 @@ function vCalendario() {
   // panel del día
   const sd = ui.calSel, sevs = delDia(sd), sih = inhSet.get(sd);
   const panel = `<h2>${cap(fdw(sd))}</h2><div class="c2-sub">${sih && sih !== 'Descanso' ? esc(sih) : sevs.length + (sevs.length === 1 ? ' clase' : ' clases')}</div>
-    ${sevs.length ? sevs.map(s => { const l = lugarDe(s.x); return `<div class="c2-cl" style="--c:${colLugar(l)}"><div class="h"><span>${esc(horaDe(s)) || 'Sin horario'}</span><span class="lug">${esc(lugN(l))}${l !== 'En línea' && s.x.g.salon ? ' · ' + esc(s.x.g.salon) : ''}</span></div><div class="p">${esc(s.x.nombre)} <span class="muted small">Gen ${s.x.gen}</span></div><div class="m">Módulo ${s.m.idx + 1}${s.m.nombre ? ' · ' + esc(s.m.nombre) : ''}</div><div class="m">${s.prof ? esc(profName(s.prof)) : '<span style="color:var(--crit)">Sin profesor</span>'}${s.conf ? ' · <b style="color:var(--crit)">choque de profesor</b>' : ''}</div><button class="c2-open" data-go="d-${s.gid}">Abrir diplomado →</button></div>`; }).join('') : `<div class="empty">${sih && sih !== 'Descanso' ? 'Día inhábil, sin clases.' : 'Sin clases este día.'}</div>`}`;
+    ${sevs.length ? sevs.map(s => { const l = lugarDe(s.x); return `<div class="c2-cl" style="--c:${colLugar(l)}"><div class="h"><span>${esc(horaDe(s)) || 'Sin horario'}</span><span class="lug">${esc(lugN(l))}${l !== 'En línea' && s.x.g.salon ? ' · ' + esc(s.x.g.salon) : ''}</span></div><div class="p">${esc(s.x.nombre)} <span class="muted small">Gen ${s.x.gen}</span></div><div class="m">Módulo ${s.m.idx + 1}${s.m.nombre ? ' · ' + esc(s.m.nombre) : ''}</div><div class="m">${s.prof ? esc(profName(s.prof)) : '<span style="color:var(--crit)">Sin profesor</span>'}${s.conf ? ' · <b style="color:var(--crit)">choque de profesor</b>' : ''}</div>${s.confSalon ? `<div class="m"><b style="color:var(--crit)">⚠ Choque de salón:</b> ${esc(s.x.g.salon)} también lo usa ${esc(s.confSalon.nombre)}</div>` : ''}<button class="c2-open" data-go="d-${s.gid}">Abrir diplomado →</button></div>`; }).join('') : `<div class="empty">${sih && sih !== 'Descanso' ? 'Día inhábil, sin clases.' : 'Sin clases este día.'}</div>`}`;
   const tituloMes = ui.calVista2 === 'anio' ? String(y) : `${MESL[m - 1]} ${y}`;
   return `<div class="head"><div><h1>Calendario</h1><p>Todas las clases de todos los diplomados. Los días sombreados son inhábiles según el calendario oficial IBERO.</p></div></div>
   <div class="c2-bar">
