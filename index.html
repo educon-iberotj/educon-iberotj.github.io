@@ -1455,7 +1455,7 @@ function genCard(x, enPrograma) {
   return `<a class="gcard" href="#d-${x.id}" style="--pc:${col}">
     <div class="g-top"><span class="g-gen">Gen ${x.gen}</span><div class="g-tr">${stPill(x.st)}${colabsDe(x.g).length ? `<div class="g-logos" title="En colaboración con ${esc(colabsDe(x.g).map(([, o]) => o.nombre).join(', '))}">${colabStrip(x.g, 40)}</div>` : ''}</div></div>
     ${enPrograma ? '' : `<div class="g-name">${esc(x.nombre)}</div>`}
-    <div class="g-sub">${esc([x.sc.inicio && /tentativ|^pr[oó]xima$/i.test(x.g.etiqueta || '') ? '' : x.g.etiqueta, x.p.tipo, !enPrograma && x.total > 1 ? `${x.total} generaciones en total` : ''].filter(Boolean).join(' · '))}</div>
+    <div class="g-sub">${esc([x.p.tipo, !enPrograma && x.total > 1 ? `${x.total} generaciones en total` : ''].filter(Boolean).join(' · '))}</div>
     <div class="g-dates">${fechas}</div>
     ${avance}
     ${meta ? `<div class="g-meta">${meta}</div>` : ''}
