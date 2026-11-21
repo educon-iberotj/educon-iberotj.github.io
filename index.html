@@ -888,7 +888,7 @@ const PALETA = ['#F2A7AE','#F5C38E','#E9DE8A','#A9DDB0','#9FC3EE','#C7B2EC','#F0
 const S = { programas:{}, gens:{}, profes:{}, orgs:{}, inter:{}, tareas:{}, preguntas:{}, alumnos:{}, asist:{}, precios:null, inh:{ lista:[] }, loaded:new Set() };
 let db = null, user = null, myId = null, canWrite = true, dirty = false, ROL = 'admin';
 const edInhOk = () => canWrite && ['admin','coordinacion'].includes(ROL);
-const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'area', genArea:'' };
+const ui = { genTab:'activos', genSub:'', q:'', calMes:null, calProg:'', calMod:'', calSede:'', profQ:'', orgQ:'', orgEtapa:'', orgPrior:'', orgProg:'', newGen:false, tGroup:'estado', tMine:false, tQ:'', tShow:'', calColor:'programa', genGroup:'area', genArea:'' };
 
 // ---------- motor de fechas ----------
 let inhSet = new Map();
@@ -1667,13 +1667,17 @@ function vCalendario() {
   const days = []; for (let i = 0; i < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(ds(d)); }
   const vista = ui.calVista || 'general';
   const lugarDe = x => x.g.modalidad === 'En línea' || x.g.sede === 'En línea' ? 'En línea' : (x.g.sede || 'Sin sede');
+  const modDe = x => lugarDe(x) === 'En línea' ? 'En línea' : 'Presencial';
+  const sedeKey = x => { const t = norm(x.g.sede || ''); return t.includes('playa') ? 'playas' : t.includes('rio') ? 'rio' : t.includes('coparmex') ? 'coparmex' : ''; };
+  const SEDES = [['playas','Campus Playas'],['rio','Campus Río'],['coparmex','COPARMEX']];
+  const pasaLugar = x => (!ui.calMod || modDe(x) === ui.calMod) && (!ui.calSede || (modDe(x) === 'Presencial' && sedeKey(x) === ui.calSede));
   const salonDe = x => lugarDe(x) === 'En línea' ? 'En línea' : `${(x.g.sede || 'Sin sede').replace('Campus ', '')} · ${x.g.salon || 'sin salón'}`;
   const grupoDe = x => vista === 'sede' ? lugarDe(x) : vista === 'salon' ? salonDe(x) : '';
   const gruposVis = vista === 'general' ? [] : [...new Set(D.gens.filter(x => x.sc.all.length && x.st !== 'Cancelado' && (x.sc.fin || '') >= `${ui.calMes}-01` && (x.sc.inicio || '') <= `${ui.calMes}-31`).map(grupoDe))].sort();
   const PAL_L = ['#E5202E','#2F6FB0','#2E8B57','#C77700','#7B3FA0','#0F8C8C','#A0522D','#5A6B7B'];
   const colGrupo = gname => PAL_L[[...new Set(D.gens.map(grupoDe))].sort().indexOf(gname) % PAL_L.length];
   const selG = vista !== 'general' && gruposVis.includes(ui.calGrupo) ? ui.calGrupo : '';
-  const filt = s => (!ui.calProg || s.x.g.programaId === ui.calProg) && (!selG || grupoDe(s.x) === selG);
+  const filt = s => (!ui.calProg || s.x.g.programaId === ui.calProg) && (!selG || grupoDe(s.x) === selG) && pasaLugar(s.x);
   const evCol = s => vista !== 'general' ? colGrupo(grupoDe(s.x)) : ui.calColor === 'modulo' ? modCol(s.m.idx) : D.col[s.x.g.programaId];
   const cells = days.map(d => { const evs = (D.byDay.get(d) || []).filter(filt); const ih = inhSet.get(d);
     return `<div class="d ${d.slice(0, 7) !== ui.calMes ? 'out' : ''} ${ih ? 'inh' : ''} ${d === TODAY ? 'hoy' : ''}"><span class="dn">${pd(d).getDate()}</span>${ih ? `<span class="inhl">${esc(ih)}</span>` : ''}
@@ -1682,7 +1686,7 @@ function vCalendario() {
   const agenda = monthDays.filter(d => (D.byDay.get(d) || []).some(filt) || (inhSet.get(d) && inhSet.get(d) !== 'Descanso')).map(d => `<div class="li"><div class="when">${fdw(d)}</div><div class="small" style="min-width:0">${inhSet.get(d) ? `<div class="muted">${esc(inhSet.get(d))}</div>` : ''}${(D.byDay.get(d) || []).filter(filt).map(s => `<div><a href="#d-${s.gid}"><span class="swatch" style="display:inline-block;margin:0 6px 0 0;background:${evCol(s)}"></span>${esc(s.x.nombre)}</a> · M${s.m.idx + 1}${s.conf ? ' <b style="color:var(--crit)">choque</b>' : ''}</div>`).join('')}</div></div>`).join('');
   // gantt anual
   const yr = y; const y0 = `${yr}-01-01`, y1 = `${yr}-12-31`; const span = daysBetween(y0, y1) + 1;
-  const rows = D.gens.filter(x => x.st !== 'Cancelado' && x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg) && (!selG || grupoDe(x) === selG)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
+  const rows = D.gens.filter(x => x.st !== 'Cancelado' && x.sc.inicio && x.sc.fin && x.sc.inicio <= y1 && x.sc.fin >= y0 && (!ui.calProg || x.g.programaId === ui.calProg) && (!selG || grupoDe(x) === selG) && pasaLugar(x)).sort((a, b) => a.sc.inicio.localeCompare(b.sc.inicio));
   const nowPct = TODAY.slice(0, 4) == yr ? daysBetween(y0, TODAY) / span * 100 : null;
   const gantt = rows.map(x => { const a = x.sc.inicio < y0 ? y0 : x.sc.inicio, b = x.sc.fin > y1 ? y1 : x.sc.fin; const l = daysBetween(y0, a) / span * 100, w = (daysBetween(a, b) + 1) / span * 100;
     return `<div class="gl"><a href="#d-${x.id}">${esc(x.nombre)}</a> <span class="muted small">Gen ${x.gen}</span></div><div class="gt">${nowPct != null ? `<span class="now" style="left:${nowPct}%"></span>` : ''}<span class="gb" style="left:${l}%;width:${w}%;background:${D.col[x.g.programaId]}" title="${esc(x.label)}: ${fd(x.sc.inicio)} → ${fd(x.sc.fin)}"></span></div>`; }).join('');
@@ -1690,6 +1694,8 @@ function vCalendario() {
   const progsUsed = [...new Set(D.gens.filter(x => x.sc.all.length).map(x => x.g.programaId))].map(p => [p, (S.programas[p] || {}).nombre || p]).sort((a, b) => a[1].localeCompare(b[1]));
   return `<div class="head"><div><h1>Calendario</h1><p>Todas las clases de todos los diplomados. Los días rayados son inhábiles según el calendario oficial IBERO; los domingos son de descanso.</p></div>
     <div class="tools"><select class="in flt" id="cal-prog" style="width:auto" aria-label="Filtrar por programa"><option value="">Todos los programas</option>${progsUsed.map(([k, n]) => `<option value="${k}" ${ui.calProg === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+    <select class="in flt" id="cal-mod" style="width:auto" aria-label="Filtrar por modalidad"><option value="">Presencial y en línea</option>${['Presencial','En línea'].map(v => `<option value="${v}" ${ui.calMod === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    ${ui.calMod !== 'En línea' ? `<select class="in flt" id="cal-sede" style="width:auto" aria-label="Filtrar por sede"><option value="">Todas las sedes</option>${SEDES.map(([k, n]) => `<option value="${k}" ${ui.calSede === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
     <button class="btn" data-act="cal" data-d="-1" aria-label="Mes anterior">←</button><b style="min-width:150px;text-align:center">${MESL[m - 1]} ${y}</b><button class="btn" data-act="cal" data-d="1" aria-label="Mes siguiente">→</button><button class="btn" data-act="cal" data-d="0" title="Ir al mes actual">Hoy</button></div></div>
   <div class="tools"><span class="small muted">Ver</span><div class="tabs">${[['general','General'],['sede','Por modalidad y sede'],['salon','Por salón']].map(([v, t]) => `<button class="tab ${vista === v ? 'on' : ''}" data-act="cal-vista" data-v="${v}">${t}</button>`).join('')}</div>
     ${vista !== 'general' ? `<div class="chips"><button class="chip ${!selG ? 'on' : ''}" data-act="cal-grupo" data-v="">Todos</button>${gruposVis.map(gname => `<button class="chip ${selG === gname ? 'on' : ''}" data-act="cal-grupo" data-v="${esc(gname)}"><span class="g-dot" style="background:${colGrupo(gname)};width:9px;height:9px;display:inline-block;margin-right:5px;vertical-align:0"></span>${esc(gname)} <span class="muted">${D.gens.filter(x => grupoDe(x) === gname && x.sc.all.some(d => d.startsWith(ui.calMes))).length}</span></button>`).join('')}</div>` : ''}</div>
@@ -2471,6 +2477,8 @@ document.addEventListener('change', e => {
     const [tipo, vid] = el.value.split(':'); taskPatch(el.dataset.tv, t => { t.vinculo = vid ? { tipo, id:vid } : null; }, 'Guardado');
   } else if (el.id === 't-mine') { ui.tMine = el.checked; render(); }
   else if (el.id === 'cal-prog') { ui.calProg = el.value; render(); }
+  else if (el.id === 'cal-mod') { ui.calMod = el.value; if (el.value === 'En línea') ui.calSede = ''; render(); }
+  else if (el.id === 'cal-sede') { ui.calSede = el.value; if (el.value) ui.calMod = 'Presencial'; render(); }
   else if (el.id === 'f-etapa') { ui.orgEtapa = el.value; render(); }
   else if (el.id === 'f-prior') { ui.orgPrior = el.value; render(); }
   else if (el.id === 'f-prog') { ui.orgProg = el.value; render(); }
