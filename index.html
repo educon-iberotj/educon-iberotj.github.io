@@ -1672,7 +1672,8 @@ function vCalendario() {
   const lugares = LUG_BASE.concat([...new Set(D.gens.filter(enMes).map(lugarDe))].filter(l => !LUG_BASE.includes(l)).sort());
   const lugN = l => l === 'Coparmex' ? 'COPARMEX' : l;
   const PAL_LUG = ['#2F6FB0','#E5202E','#2E8B57','#7B3FA0','#C77700','#5A6B7B'];
-  const colLugar = l => PAL_LUG[lugares.indexOf(l) % PAL_LUG.length];
+  const COL_LUG = { 'Coparmex':'#2F6FB0', 'Campus Playas':'#E5202E', 'Campus Río':'#2E8B57', 'En línea':'#7B3FA0' };
+  const colLugar = l => COL_LUG[l] || PAL_LUG[4 + (lugares.indexOf(l) % 2)];
   const selL = lugares.includes(ui.calLugar) ? ui.calLugar : '';
   const salonDe2 = x => x.g.salon || 'Sin salón';
   const salones = selL && selL !== 'En línea' ? [...new Set(D.gens.filter(x => enMes(x) && lugarDe(x) === selL).map(salonDe2))].sort() : [];
