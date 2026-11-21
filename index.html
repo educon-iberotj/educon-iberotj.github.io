@@ -1238,7 +1238,8 @@ function atiende() {
   if (atr.length) A.push({ sev:1, d:TODAY, t:`<b>${atr.length} alumnos atrasados en sus pagos</b> · ${money(atr.reduce((s, a) => s + cobro(a).atraso, 0))} vencido`, h:'cobranza' });
   for (const [id, t] of Object.entries(S.tareas || {})) if (t.estado !== 'Completada' && t.vence && t.vence < TODAY) A.push({ sev:2, d:t.vence, t:`<b>Pendiente vencido:</b> ${esc(t.titulo || 'Sin título')} · venció el ${fd(t.vence, false)}`, h:'t-' + id });
   for (const c of D.conflicts.filter(c => c.d >= TODAY && c.d <= addDays(TODAY, 60))) A.push({ sev:3, d:c.d, t:`<b>Choque:</b> ${esc(profName(c.pid))} tiene clase en ${c.a.map(s => esc(s.x.nombre)).join(' y ')} el ${fdw(c.d)}`, h:'d-' + c.a[0].gid });
-  for (const c of D.salonConflicts.filter(c => c.d >= TODAY && c.d <= addDays(TODAY, 60))) A.push({ sev:3, d:c.d, t:`<b>Choque de salón:</b> ${esc(c.salon)} (${esc(c.sede.replace('Campus ', ''))}) lo usan ${c.a.map(s => esc(s.x.nombre)).join(' y ')} el ${fdw(c.d)}`, h:'d-' + c.a[0].gid });
+  { const grp = {}; for (const c of D.salonConflicts.filter(c => c.d >= TODAY)) { const k = c.a.map(s => s.gid).sort().join('|') + '|' + c.salon; (grp[k] = grp[k] || []).push(c); }
+    for (const cs of Object.values(grp)) { const c = cs[0]; A.push({ sev:3, d:c.d, t:`<b>Choque de salón:</b> ${esc(c.salon)} (${esc(c.sede.replace('Campus ', ''))}) lo usan ${c.a.map(s => esc(s.x.nombre)).join(' y ')} · ${cs.length === 1 ? 'el ' + fdw(c.d) : cs.length + ' días desde el ' + fdw(c.d)}`, h:'d-' + c.a[0].gid }); } }
   for (const s of D.inhHits.filter(s => s.d <= addDays(TODAY, 60))) A.push({ sev:2, d:s.d, t:`<b>Clase en día inhábil:</b> ${esc(s.x.nombre)} ${genB(s.x)}, módulo ${s.m.idx + 1}, el ${fdw(s.d)} (${esc(inhSet.get(s.d))})`, h:'d-' + s.gid });
   for (const [id, o] of Object.entries(S.orgs)) {
     if (!['Estratégica','Alta'].includes(o.prioridad) || !['En contacto','En negociación','Colaboración activa'].includes(o.etapa)) continue;
