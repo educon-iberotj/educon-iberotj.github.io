@@ -909,7 +909,12 @@ const PRECIOS_BASE = { esquemas:[
 const esquemas = () => ((S.precios && S.precios.esquemas) || PRECIOS_BASE.esquemas);
 function esqAuto(pid, p) { if (p && p.esquemaPrecio) return p.esquemaPrecio; if (['alta-direccion','gestion-financiera'].includes(pid)) return 'coparmex'; if (!p) return null; return p.tipo === 'Curso' ? 'cursos' : p.tipo === 'Diplomado' ? 'diplomados' : null; }
 const opsOrd = e => [...((e && e.opciones) || [])].sort((a, b) => (Number(a.desc) || 0) - (Number(b.desc) || 0));
-function esqDe(g, p) { const id = g.esquemaPrecio || esqAuto(g.programaId, p);
+const esContado = o => /contado/i.test((o && o.nombre) || '');
+function esqDe(g, p) { const e = esqBase(g, p); const ov = g.pagosPorOpcion || {}; if (!e || !Object.keys(ov).length) return e;
+  const n = k => Number(ov[k]) || null;
+  return { ...e, pagosDef:Number(e.pagosLista) || 1, pagosLista:(!e.manual && n('Precio de lista')) || e.pagosLista,
+    opciones:(e.opciones || []).map(o => !esContado(o) && n(o.nombre) ? { ...o, pagosDef:o.pagos, pagos:n(o.nombre) } : o) }; }
+function esqBase(g, p) { const id = g.esquemaPrecio || esqAuto(g.programaId, p);
   if (id === 'ninguno') { const c = Number(g.costoInscripcion) || 0; if (!c) return null;
     const src = esquemas().find(e => e.id === (g.descuentosDe || 'diplomados')) || esquemas().find(e => e.porHora == null) || {};
     const sin = g.descuentosDe === 'ninguno';
@@ -1733,7 +1738,7 @@ function vGen(id) {
         <div><span class="lbl">Cobrado ${ig.cobManual ? '(según CRM)' : '(estimado)'}</span><b style="color:var(--ok)">${money(ig.cobrado)}</b><small>${ig.cobManual ? 'capturado a mano' : 'contado completo + parcialidades vencidas'}</small></div>
         <div><span class="lbl">Por cobrar</span><b>${money(ig.porCobrar)}</b><div class="ins ok"><div class="ibar"><i style="width:${p}%"></i></div><span class="num small">${p}% cobrado</span></div></div></div>
         ${ig.est ? '<div class="note small">Para que el cálculo salga exacto, reparte los inscritos por forma de pago abajo; los que no repartas se calculan con el promedio de las opciones.</div>' : ''}`; })()}
-    ${x.eq ? `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th><th>Inscritos</th></tr></thead><tbody>${[{ nombre:'Precio de lista', desc:0, pagos:Number(x.eq.pagosLista) || 1 }, ...opsOrd(x.eq)].map(o => { const tot = r2(x.eq.base * (1 - (Number(o.desc) || 0) / 100)); const n = Number(o.pagos) || 1; return `<tr${o.interna ? ' class="pint"' : ''}><td>${esc(o.nombre)}${o.interna ? ' <span class="tag interna" title="Solo uso interno: no sale en materiales para externos">Interno</span>' : ''}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${Number(o.desc) >= 100 ? 'Sin pago' : n > 1 ? `${n} pagos de <b>${money(r2(tot / n))}</b>` : 'Un solo pago'}</td><td style="width:90px"><input class="in num" type="number" min="0" value="${(g.inscritosPorOpcion || {})[o.nombre] ?? ''}" data-io="${id}|${esc(o.nombre)}" aria-label="Inscritos con ${esc(o.nombre)}"></td></tr>`; }).join('')}</tbody></table></div>` : ''}
+    ${x.eq ? `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th><th>Inscritos</th></tr></thead><tbody>${[{ nombre:'Precio de lista', desc:0, pagos:Number(x.eq.pagosLista) || 1 }, ...opsOrd(x.eq)].map(o => { const tot = r2(x.eq.base * (1 - (Number(o.desc) || 0) / 100)); const n = Number(o.pagos) || 1; return `<tr${o.interna ? ' class="pint"' : ''}><td>${esc(o.nombre)}${o.interna ? ' <span class="tag interna" title="Solo uso interno: no sale en materiales para externos">Interno</span>' : ''}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${Number(o.desc) >= 100 ? 'Sin pago' : esContado(o) || (o.desc === 0 && x.eq.manual) || !canWrite ? (n > 1 ? `${n} pagos de <b>${money(r2(tot / n))}</b>` : 'Un solo pago') : (() => { const ov = (g.pagosPorOpcion || {})[o.nombre]; const def = o.desc === 0 ? (x.eq.pagosDef || x.eq.pagosLista) : (o.pagosDef ?? o.pagos); return `<span style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap"><select class="in" style="width:auto;padding:4px 8px" data-pp="${id}|${esc(o.nombre)}" aria-label="Parcialidades de ${esc(o.nombre)}"><option value="">${Number(def) > 1 ? def + ' pagos' : '1 pago'} (esquema)</option>${[...Array(12)].map((_, k) => `<option value="${k + 1}" ${Number(ov) === k + 1 ? 'selected' : ''}>${k ? k + 1 + ' pagos' : '1 pago'}</option>`).join('')}</select>${n > 1 ? `de <b>${money(r2(tot / n))}</b>` : ''}</span>`; })()}</td><td style="width:90px"><input class="in num" type="number" min="0" value="${(g.inscritosPorOpcion || {})[o.nombre] ?? ''}" data-io="${id}|${esc(o.nombre)}" aria-label="Inscritos con ${esc(o.nombre)}"></td></tr>`; }).join('')}</tbody></table></div>` : ''}
   </section>
   ${linkedTasks('gen', id)}
   <section class="card pad sec"><div class="sec-h"><h2>Organizaciones afines</h2><span class="small muted">${orgs.length} en el directorio de vinculación</span></div>
@@ -2553,6 +2558,11 @@ document.addEventListener('change', e => {
     const parts = el.dataset.pr.split('|'); const P = clone({ esquemas:esquemas() }); const e = P.esquemas[Number(parts[0])]; const v = readVal(el);
     if (parts[1] === 'o') e.opciones[Number(parts[2])][parts[3]] = v ?? 0; else e[parts[1]] = v ?? 0;
     savePrecios(P);
+  } else if (el.dataset.pp) {
+    const i = el.dataset.pp.indexOf('|'); const gid = el.dataset.pp.slice(0, i), op = el.dataset.pp.slice(i + 1);
+    const g = strip(S.gens[gid]); g.pagosPorOpcion = { ...(g.pagosPorOpcion || {}) };
+    if (el.value === '') delete g.pagosPorOpcion[op]; else g.pagosPorOpcion[op] = Number(el.value);
+    save('generaciones', gid, g, 'Parcialidades guardadas');
   } else if (el.dataset.io) {
     const i = el.dataset.io.indexOf('|'); const gid = el.dataset.io.slice(0, i), op = el.dataset.io.slice(i + 1);
     const g = strip(S.gens[gid]); g.inscritosPorOpcion = { ...(g.inscritosPorOpcion || {}) }; const v = readVal(el);
