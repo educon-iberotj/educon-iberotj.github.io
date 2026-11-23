@@ -910,7 +910,11 @@ const esquemas = () => ((S.precios && S.precios.esquemas) || PRECIOS_BASE.esquem
 function esqAuto(pid, p) { if (p && p.esquemaPrecio) return p.esquemaPrecio; if (['alta-direccion','gestion-financiera'].includes(pid)) return 'coparmex'; if (!p) return null; return p.tipo === 'Curso' ? 'cursos' : p.tipo === 'Diplomado' ? 'diplomados' : null; }
 const opsOrd = e => [...((e && e.opciones) || [])].sort((a, b) => (Number(a.desc) || 0) - (Number(b.desc) || 0));
 const esContado = o => /contado/i.test((o && o.nombre) || '');
-function esqDe(g, p) { const e = esqBase(g, p); const ov = g.pagosPorOpcion || {}; if (!e || !Object.keys(ov).length) return e;
+function esqDe(g, p) { const e0 = esqBase(g, p); const em = Number(g.extraMonto) || 0;
+  const ocu = g.opcionesOcultas || [];
+  let e = e0 && em > 0 ? { ...e0, extra:{ nombre:(g.extraNombre || '').trim() || 'Cargo aparte', monto:em, fecha:g.extraFecha || null } } : e0;
+  if (e && ocu.length) e = { ...e, opciones:(e.opciones || []).filter(o => !ocu.includes(o.nombre)), ocultas:ocu };
+  const ov = g.pagosPorOpcion || {}; if (!e || !Object.keys(ov).length) return e;
   const n = k => Number(ov[k]) || null;
   return { ...e, pagosDef:Number(e.pagosLista) || 1, pagosLista:(!e.manual && n('Precio de lista')) || e.pagosLista,
     opciones:(e.opciones || []).map(o => !esContado(o) && n(o.nombre) ? { ...o, pagosDef:o.pagos, pagos:n(o.nombre) } : o) }; }
@@ -950,10 +954,21 @@ function resolveEq(e, h) { if (!e || e.porHora == null) return e; return { ...e,
 const hTxt = h => `${Number.isInteger(h) ? h : String(h).replace(/\.0$/, '')} h`;
 const addMonths = (s, n) => { const d = pd(s); const day = d.getDate(); d.setMonth(d.getMonth() + n); if (d.getDate() < day) d.setDate(0); return ds(d); };
 const r2 = n => Math.round(n * 100) / 100;
+// precio de cada opción: la beca aplica al programa; el cargo aparte (p. ej. examen) se cobra completo y en un pago aparte
+const curOp = (e, o) => r2(e.base * (1 - (Number(o.desc) || 0) / 100));
+const precioOp = (e, o) => r2(curOp(e, o) + ((e.extra && e.extra.monto) || 0));
+function montosOp(e, o) { const c = curOp(e, o), x = (e.extra && e.extra.monto) || 0, n = Number(o.pagos) || 1;
+  if (esContado(o)) return [r2(c + x)].filter(v => v > 0);
+  const m = c > 0 ? Array(n).fill(r2(c / n)) : []; if (x) m.push(x); return m; }
+function pagoTxt(e, o) { const c = curOp(e, o), n = Number(o.pagos) || 1, x = e.extra;
+  if (!x) return Number(o.desc) >= 100 ? 'Sin pago' : n > 1 ? `${n} pagos de <b>${money(r2(c / n))}</b>` : 'Un solo pago';
+  if (esContado(o)) return `Un solo pago (incluye ${esc(x.nombre.toLowerCase())})`;
+  const cur = c <= 0 ? '' : n > 1 ? `${n} pagos de <b>${money(r2(c / n))}</b>` : `1 pago de <b>${money(c)}</b>`;
+  return `${cur}${cur ? ' + ' : ''}${esc(x.nombre)}: <b>${money(x.monto)}</b>`; }
 function priceTable(e) {
   if (!e) return '';
   const rows = [{ nombre:'Precio de lista', desc:0, pagos:Number(e.pagosLista) || 1 }, ...opsOrd(e)];
-  return `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th></tr></thead><tbody>${rows.map((o, i) => { const tot = r2(e.base * (1 - (Number(o.desc) || 0) / 100)); const n = Number(o.pagos) || 1;
+  return `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th></tr></thead><tbody>${rows.map((o, i) => { const tot = precioOp(e, o); const n = Number(o.pagos) || 1;
     return `<tr${i === 0 ? ' class="plist"' : ''}><td>${esc(o.nombre)}${o.interna ? ' <span class="tag interna" title="Solo uso interno: no sale en materiales para externos">Interno</span>' : ''}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${Number(o.desc) >= 100 ? 'Sin pago' : n > 1 ? `${n} pagos de <b>${money(r2(tot / n))}</b>` : 'Un solo pago'}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 const PALETA_MOD = ['#EB9DA2','#F0B884','#E8E6A5','#BBE8B5','#ACBBE8','#C5ACE8','#F2B8D8','#9FD8D4','#D9C3A5'];
@@ -1196,7 +1211,7 @@ const insDe = x => { const n = alAct(x).length; return n || Number(x.g.inscritos
 function ingreso(x) {
   const act = alAct(x);
   if (act.length) { const cs = act.map(([, a]) => cobro(a)); const sinPlan = cs.filter(c => !c.total).length;
-    const e = x.eq; const ops = e ? (e.opciones || []).filter(o => !o.interna) : []; const avg = e ? (ops.length ? ops.reduce((s, o) => s + r2(e.base * (1 - (Number(o.desc) || 0) / 100)), 0) / ops.length : e.base) : 0;
+    const e = x.eq; const ops = e ? (e.opciones || []).filter(o => !o.interna) : []; const avg = e ? (ops.length ? ops.reduce((s, o) => s + precioOp(e, o), 0) / ops.length : precioOp(e, { desc:0 })) : 0;
     const total = Math.round(cs.reduce((s, c) => s + (c.total || 0), 0) + sinPlan * avg); const cobrado = Math.round(cs.reduce((s, c) => s + c.pagado, 0));
     return { total, est:sinPlan > 0, n:act.length, cobEst:cobrado, cobrado, cobManual:false, real:true, porCobrar:Math.max(0, total - cobrado) }; }
   const g = x.g, e = x.eq, ins = Number(g.inscritos) || 0;
@@ -1207,8 +1222,8 @@ function ingreso(x) {
   let k = 1; const ini = x.sc.inicio;
   if (x.st === 'Concluido') k = 99; else if (ini && TODAY >= ini) { const a = pd(ini), t = pd(TODAY); k = 1 + (t.getFullYear() - a.getFullYear()) * 12 + t.getMonth() - a.getMonth() - (t.getDate() < a.getDate() ? 1 : 0); }
   if (!e) { const b = Number(g.costoInscripcion) || 0; return fin({ total:ins * b, est:false, n:ins, cobEst:ins * b }); }
-  const price = o => r2(e.base * (1 - (Number(o.desc) || 0) / 100));
-  const paid = o => { const p = price(o), n = Number(o.pagos) || 1; return p * Math.min(n, k) / n; };
+  const price = o => precioOp(e, o);
+  const paid = o => montosOp(e, o).slice(0, k).reduce((a, v) => a + v, 0);
   const lista = { nombre:'Precio de lista', desc:0, pagos:Number(e.pagosLista) || 1 };
   const br = g.inscritosPorOpcion || {}; let n = 0, t = 0, c = 0;
   [lista, ...(e.opciones || [])].forEach(o => { const q = Number(br[o.nombre]) || 0; n += q; t += q * price(o); c += q * paid(o); });
@@ -1721,6 +1736,9 @@ function vGen(id) {
       ${!x.eq || x.eq.manual ? fld('Costo total (precio de lista)', `<input class="in num" type="number" min="0" value="${g.costoInscripcion ?? ''}" ${b('costoInscripcion', 'num')}>`) : ''}
       ${g.esquemaPrecio === 'ninguno' ? fld('Becas y descuentos', sel([...esquemas().filter(e => e.porHora == null).map(e => [e.id, 'Los de ' + e.nombre]), ['ninguno', 'Sin descuentos']], g.descuentosDe || 'diplomados', b('descuentosDe', 'opt'), false)) : ''}
       ${g.esquemaPrecio === 'ninguno' ? fld('Parcialidades del precio de lista', sel([...Array(12)].map((_, k) => [String(k + 1), k ? `${k + 1} pagos` : '1 pago']), String(x.eq ? x.eq.pagosLista : (g.parcialidades || 1)), b('parcialidades', 'num'), false)) : ''}
+      ${fld('Cargo aparte (sin beca)', `<input class="in" value="${esc(g.extraNombre || '')}" placeholder="Ej. Examen TOEFL iBT" ${b('extraNombre')}>`)}
+      ${Number(g.extraMonto) > 0 ? fld('Pagar el cargo aparte antes del', `<input class="in" type="date" value="${g.extraFecha || ''}" ${b('extraFecha')}><small class="muted">Vacío = la última sesión${x.sc.fin ? ` (${fd(x.sc.fin)})` : ''}</small>`) : ''}
+      ${fld('Monto del cargo aparte', `<input class="in num" type="number" min="0" value="${g.extraMonto ?? ''}" placeholder="0 = no hay" ${b('extraMonto', 'num')}>`)}
     </div>
     ${!x.eq || x.eq.manual ? (() => { const ph = precioHora(); const h = x.horas || 0; const sug = Math.round(ph * h);
       return `<div class="phora"><div><span class="lbl">Precio por hora de referencia</span><b>${money(ph)}</b><small>${esc(precioHoraFuente())}</small></div>
@@ -1738,7 +1756,7 @@ function vGen(id) {
         <div><span class="lbl">Cobrado ${ig.cobManual ? '(según CRM)' : '(estimado)'}</span><b style="color:var(--ok)">${money(ig.cobrado)}</b><small>${ig.cobManual ? 'capturado a mano' : 'contado completo + parcialidades vencidas'}</small></div>
         <div><span class="lbl">Por cobrar</span><b>${money(ig.porCobrar)}</b><div class="ins ok"><div class="ibar"><i style="width:${p}%"></i></div><span class="num small">${p}% cobrado</span></div></div></div>
         ${ig.est ? '<div class="note small">Para que el cálculo salga exacto, reparte los inscritos por forma de pago abajo; los que no repartas se calculan con el promedio de las opciones.</div>' : ''}`; })()}
-    ${x.eq ? `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th><th>Inscritos</th></tr></thead><tbody>${[{ nombre:'Precio de lista', desc:0, pagos:Number(x.eq.pagosLista) || 1 }, ...opsOrd(x.eq)].map(o => { const tot = r2(x.eq.base * (1 - (Number(o.desc) || 0) / 100)); const n = Number(o.pagos) || 1; return `<tr${o.interna ? ' class="pint"' : ''}><td>${esc(o.nombre)}${o.interna ? ' <span class="tag interna" title="Solo uso interno: no sale en materiales para externos">Interno</span>' : ''}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${Number(o.desc) >= 100 ? 'Sin pago' : esContado(o) || (o.desc === 0 && x.eq.manual) || !canWrite ? (n > 1 ? `${n} pagos de <b>${money(r2(tot / n))}</b>` : 'Un solo pago') : (() => { const ov = (g.pagosPorOpcion || {})[o.nombre]; const def = o.desc === 0 ? (x.eq.pagosDef || x.eq.pagosLista) : (o.pagosDef ?? o.pagos); return `<span style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap"><select class="in" style="width:auto;padding:4px 8px" data-pp="${id}|${esc(o.nombre)}" aria-label="Parcialidades de ${esc(o.nombre)}"><option value="">${Number(def) > 1 ? def + ' pagos' : '1 pago'} (esquema)</option>${[...Array(12)].map((_, k) => `<option value="${k + 1}" ${Number(ov) === k + 1 ? 'selected' : ''}>${k ? k + 1 + ' pagos' : '1 pago'}</option>`).join('')}</select>${n > 1 ? `de <b>${money(r2(tot / n))}</b>` : ''}</span>`; })()}</td><td style="width:90px"><input class="in num" type="number" min="0" value="${(g.inscritosPorOpcion || {})[o.nombre] ?? ''}" data-io="${id}|${esc(o.nombre)}" aria-label="Inscritos con ${esc(o.nombre)}"></td></tr>`; }).join('')}</tbody></table></div>` : ''}
+    ${x.eq ? `<div class="tbl-w"><table class="ptbl"><thead><tr><th>Opción</th><th>Beca</th><th>Total</th><th>Forma de pago</th><th>Inscritos</th></tr></thead><tbody>${[{ nombre:'Precio de lista', desc:0, pagos:Number(x.eq.pagosLista) || 1 }, ...opsOrd(x.eq)].map(o => { const tot = precioOp(x.eq, o); const n = Number(o.pagos) || 1; return `<tr${o.interna ? ' class="pint"' : ''}><td>${o.desc !== 0 && canWrite ? `<button class="btn ghost sm w" title="Quitar esta opción solo en este programa" data-act="op-ocultar" data-id="${id}" data-v="${esc(o.nombre)}" style="padding:0 6px;margin-right:6px">✕</button>` : ''}${esc(o.nombre)}${o.interna ? ' <span class="tag interna" title="Solo uso interno: no sale en materiales para externos">Interno</span>' : ''}</td><td class="num">${Number(o.desc) || 0}%</td><td class="num"><b>${money(tot)}</b></td><td class="small">${Number(o.desc) >= 100 && !x.eq.extra ? 'Sin pago' : esContado(o) || (o.desc === 0 && x.eq.manual) || !canWrite ? pagoTxt(x.eq, o) : (() => { const ov = (g.pagosPorOpcion || {})[o.nombre]; const def = o.desc === 0 ? (x.eq.pagosDef || x.eq.pagosLista) : (o.pagosDef ?? o.pagos); return `<span style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap"><select class="in" style="width:auto;padding:4px 8px" data-pp="${id}|${esc(o.nombre)}" aria-label="Parcialidades de ${esc(o.nombre)}"><option value="">${Number(def) > 1 ? def + ' pagos' : '1 pago'} (esquema)</option>${[...Array(12)].map((_, k) => `<option value="${k + 1}" ${Number(ov) === k + 1 ? 'selected' : ''}>${k ? k + 1 + ' pagos' : '1 pago'}</option>`).join('')}</select>${(() => { const c = curOp(x.eq, o); const cur = n > 1 ? `de <b>${money(r2(c / n))}</b>` : ''; return x.eq.extra ? `${cur} + ${esc(x.eq.extra.nombre)}: <b>${money(x.eq.extra.monto)}</b>` : cur; })()}</span>`; })()}</td><td style="width:90px"><input class="in num" type="number" min="0" value="${(g.inscritosPorOpcion || {})[o.nombre] ?? ''}" data-io="${id}|${esc(o.nombre)}" aria-label="Inscritos con ${esc(o.nombre)}"></td></tr>`; }).join('')}</tbody></table></div>${(x.eq.ocultas || []).length ? `<div class="small muted" style="margin-top:8px">Quitadas en este programa: ${x.eq.ocultas.map(n => `${esc(n)}${canWrite ? ` <button class="btn ghost sm w" data-act="op-mostrar" data-id="${id}" data-v="${esc(n)}">Volver a mostrar</button>` : ''}`).join(' · ')}</div>` : ''}${x.eq.extra ? `<div class="small muted" style="margin-top:6px">El programa se paga antes de iniciar clases. ${esc(x.eq.extra.nombre)} se paga a más tardar el ${fd(x.eq.extra.fecha || x.sc.fin) || 'último día de clases'}.</div>` : ''}` : ''}
   </section>
   ${linkedTasks('gen', id)}
   <section class="card pad sec"><div class="sec-h"><h2>Organizaciones afines</h2><span class="small muted">${orgs.length} en el directorio de vinculación</span></div>
@@ -2223,10 +2241,12 @@ function cobro(a) {
   const saldo = Math.max(0, Math.round(total - pagado));
   let k = 1; const ini = x?.sc.inicio;
   if (x && x.st === 'Concluido') k = cuotas; else if (ini && TODAY >= ini) k = 1 + mesesDesde(ini);
-  const esperado = Math.min(total, cuota * Math.min(cuotas, k));
+  const ms = Array.isArray(pl.montos) && pl.montos.length === cuotas ? pl.montos.map(Number) : null;
+  const ex = x?.eq?.extra, conEx = !!(ms && ex && ms.length > 1 && Math.abs(ms[ms.length - 1] - ex.monto) < 1), exLim = conEx ? (ex.fecha || x.sc.fin) : null;
+  const esperado = Math.min(total, conEx ? ms.slice(0, -1).slice(0, k).reduce((s, v) => s + v, 0) + (exLim && TODAY >= exLim ? ms[ms.length - 1] : 0) : ms ? ms.slice(0, k).reduce((s, v) => s + v, 0) : cuota * Math.min(cuotas, k));
   const atraso = Math.max(0, Math.round(esperado - pagado));
-  const pagadas = Math.floor((pagado + 1) / cuota);
-  const prox = saldo > 1 && ini ? addMonths(ini, Math.max(0, pagadas)) : null;
+  const pagadas = ms ? ms.reduce((acc, v) => { acc.s += v; if (acc.s <= pagado + 1) acc.n++; return acc; }, { s:0, n:0 }).n : Math.floor((pagado + 1) / cuota);
+  const prox = saldo <= 1 ? null : conEx && pagadas >= ms.length - 1 ? exLim : ini ? addMonths(ini, Math.max(0, pagadas)) : null;
   return { estado: saldo <= 1 ? 'Liquidado' : atraso > 1 ? 'Atrasado' : 'Al corriente', pagado, recargos, total, saldo, atraso, ult, prox, cuota, cuotas };
 }
 function asisDe(gid, aid) {
@@ -2316,11 +2336,11 @@ function vAlumno(id) {
   </div></section></div>
   <div class="sec">
   ${verCob ? `<section class="card pad sec"><div class="sec-h"><h2>Pagos</h2>${pill(c.estado, COB_CLS[c.estado])}</div>
-    <div class="money3"><div><span class="lbl">Total acordado</span><b>${money(c.total)}</b><small>${a.plan ? `${a.plan.cuotas} ${a.plan.cuotas > 1 ? 'pagos' : 'pago'} de ${money(a.plan.cuota)}` : 'sin plan'}</small></div>
+    <div class="money3"><div><span class="lbl">Total acordado</span><b>${money(c.total)}</b><small>${a.plan ? (a.plan.montos ? `${a.plan.cuotas} pagos: ${a.plan.montos.map(money).join(' + ')}` : `${a.plan.cuotas} ${a.plan.cuotas > 1 ? 'pagos' : 'pago'} de ${money(a.plan.cuota)}`) : 'sin plan'}</small></div>
       <div><span class="lbl">Pagado</span><b style="color:var(--ok)">${money(c.pagado)}</b><small>${c.recargos ? `+ ${money(c.recargos)} de recargos` : (c.ult ? 'último ' + fd(c.ult, false) : 'sin pagos')}</small></div>
       <div><span class="lbl">Saldo</span><b style="${c.atraso ? 'color:var(--crit)' : ''}">${money(c.saldo)}</b><small>${c.atraso ? `${money(c.atraso)} atrasado` : c.prox ? 'próximo pago ' + fd(c.prox, false) : ''}</small></div></div>
     ${ed ? `<div class="form" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
-      <div class="f wide"><label>Plan de pago</label><select class="in" data-plan="${id}">${opts.map(o => { const t = r2(eq.base * (1 - (Number(o.desc) || 0) / 100)), n = Number(o.pagos) || 1; return `<option value="${t}|${n}" ${a.plan && Math.abs(a.plan.total - t) < 1 && a.plan.cuotas === n ? 'selected' : ''}>${esc(o.nombre)} · ${money(t)}${n > 1 ? ` en ${n} pagos de ${money(r2(t / n))}` : ''}</option>`; }).join('')}<option value="custom" ${a.plan && !opts.some(o => Math.abs(a.plan.total - r2(eq.base * (1 - (Number(o.desc) || 0) / 100))) < 1 && a.plan.cuotas === (Number(o.pagos) || 1)) ? 'selected' : ''}>Otro (personalizado)</option>${!a.plan ? '<option value="" selected>Sin plan</option>' : ''}</select></div>
+      <div class="f wide"><label>Plan de pago</label><select class="in" data-plan="${id}">${opts.map(o => { const t = precioOp(eq, o), m = montosOp(eq, o), n = m.length || 1, desig = m.some(v => Math.abs(v - m[0]) > 0.5); return `<option value="${t}|${n}${desig ? '|' + m.join(',') : ''}" ${a.plan && Math.abs(a.plan.total - t) < 1 && a.plan.cuotas === n ? 'selected' : ''}>${esc(o.nombre)} · ${money(t)}${n > 1 ? (desig ? ` en ${n} pagos: ${m.map(money).join(' + ')}` : ` en ${n} pagos de ${money(r2(t / n))}`) : ''}</option>`; }).join('')}<option value="custom" ${a.plan && !opts.some(o => Math.abs(a.plan.total - precioOp(eq, o)) < 1 && a.plan.cuotas === (montosOp(eq, o).length || 1)) ? 'selected' : ''}>Otro (personalizado)</option>${!a.plan ? '<option value="" selected>Sin plan</option>' : ''}</select></div>
       ${fld('Total acordado', `<input class="in num" type="number" min="0" value="${a.plan?.total ?? ''}" data-planf="${id}|total">`)}
       ${fld('Nº de pagos', `<input class="in num" type="number" min="1" max="24" value="${a.plan?.cuotas ?? ''}" data-planf="${id}|cuotas">`)}
     </div>` : ''}
@@ -2442,7 +2462,7 @@ function vCobranza() {
     <div class="tabs">${['','Atrasado','Al corriente','Liquidado','Sin plan'].map(e => `<button class="tab ${est === e ? 'on' : ''}" data-act="cb-est" data-v="${e}">${e || 'Todos'}<em>${e ? cnt(e) : all.length}</em></button>`).join('')}</div></div>
   <div class="card tbl-w"><table><thead><tr><th>Alumno</th><th>Grupo</th><th>Plan</th><th>Pagado</th><th>Saldo</th><th>Atraso</th><th>Último pago</th><th>Estado</th></tr></thead><tbody>
     ${L.slice(0, 400).map(({ id, a, c }) => `<tr class="click" data-go="a-${id}"><td><b>${esc(nombreAl(a))}</b><div class="small muted">${matDe(a) ? `<span class="mat">${esc(matDe(a))}</span> · ` : ''}${esc(a.telefono || '')}${a.factura ? ' · factura' : ''}</div></td><td class="small">${esc(genLabel(a.generacionId))}</td>
-      <td class="small">${a.plan ? (a.plan.cuotas > 1 ? `${a.plan.cuotas} × ${money(a.plan.cuota)}` : `1 pago ${money(a.plan.total)}`) : '<span class="muted">—</span>'}</td>
+      <td class="small">${a.plan ? (a.plan.montos ? a.plan.montos.map(money).join(' + ') : a.plan.cuotas > 1 ? `${a.plan.cuotas} × ${money(a.plan.cuota)}` : `1 pago ${money(a.plan.total)}`) : '<span class="muted">—</span>'}</td>
       <td class="num">${money(Math.round(c.pagado))}${c.total ? `<div class="ins ${c.estado === 'Atrasado' ? 'low' : 'ok'}" style="max-width:110px"><div class="ibar"><i style="width:${Math.min(100, Math.round(c.pagado / c.total * 100))}%"></i></div></div>` : ''}</td>
       <td class="num">${money(c.saldo)}</td><td class="num">${c.atraso ? `<b style="color:var(--crit)">${money(c.atraso)}</b>` : '<span class="muted">—</span>'}</td><td class="num small">${c.ult ? fd(c.ult, false) : '<span class="muted">—</span>'}</td><td>${pill(c.estado, COB_CLS[c.estado])}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Sin alumnos con estos filtros.</td></tr>'}
   </tbody></table></div></section>`;
@@ -2572,11 +2592,11 @@ document.addEventListener('change', e => {
   } else if (el.dataset.fis) {
     const [aid, f] = el.dataset.fis.split('|'); const a = strip(S.alumnos[aid]); a.fiscal = { ...(a.fiscal || {}), [f]:el.value }; save('alumnos', aid, a, 'Guardado');
   } else if (el.dataset.plan) {
-    const aid = el.dataset.plan; const a = strip(S.alumnos[aid]); if (el.value === 'custom' || el.value === '') { if (el.value === '') a.plan = null; render(); if (el.value === 'custom') return; } else { const [t, n] = el.value.split('|').map(Number); a.plan = { total:t, cuotas:n, cuota:r2(t / n) }; } a.planManual = true; save('alumnos', aid, a, 'Plan actualizado');
+    const aid = el.dataset.plan; const a = strip(S.alumnos[aid]); if (el.value === 'custom' || el.value === '') { if (el.value === '') a.plan = null; render(); if (el.value === 'custom') return; } else { const [t, n, ms] = el.value.split('|'); a.plan = { total:Number(t), cuotas:Number(n), cuota:r2(Number(t) / Number(n)) }; if (ms) a.plan.montos = ms.split(',').map(Number); } a.planManual = true; save('alumnos', aid, a, 'Plan actualizado');
   } else if (el.dataset.pgf) {
     const [aid, i, f] = el.dataset.pgf.split('|'); const a = strip(S.alumnos[aid]); a.pagos = (a.pagos || []).map((p, k) => k === Number(i) ? { ...p, [f]:el.value.trim() } : p); save('alumnos', aid, a, 'Guardado');
   } else if (el.dataset.planf) {
-    const [aid, f] = el.dataset.planf.split('|'); const a = strip(S.alumnos[aid]); const p = { ...(a.plan || { total:0, cuotas:1 }) }; p[f] = Number(el.value) || 0; p.cuota = p.cuotas ? r2(p.total / p.cuotas) : p.total; a.plan = p; a.planManual = true; save('alumnos', aid, a, 'Plan actualizado');
+    const [aid, f] = el.dataset.planf.split('|'); const a = strip(S.alumnos[aid]); const p = { ...(a.plan || { total:0, cuotas:1 }) }; p[f] = Number(el.value) || 0; delete p.montos; p.cuota = p.cuotas ? r2(p.total / p.cuotas) : p.total; a.plan = p; a.planManual = true; save('alumnos', aid, a, 'Plan actualizado');
   } else if (el.dataset.imp != null && ui.impData) { ui.impData.hojas[Number(el.dataset.imp)].gen = el.value; render();
   } else if (el.dataset.rol) {
     const uid = el.dataset.rol, rol = el.value; user.asignarRol(uid, rol).then(() => { toast('Rol actualizado'); ui.eq = null; render(); }).catch(e => { toast(e.message || 'No se pudo cambiar el rol'); ui.eq = null; render(); });
@@ -2673,7 +2693,7 @@ document.addEventListener('click', async e => {
   else if (act === 'al-insc') { const gid = $('#al-insc-sel')?.value; if (!gid) { toast('Elige primero el diplomado'); return; } const o = S.alumnos[id]; const nid = `al-${gid}-${uid('n').slice(2)}`;
     await save('alumnos', nid, { generacionId:gid, matricula:o.matricula || matriculaPersona(o), nombre:o.nombre || '', apellidos:o.apellidos || '', telefono:o.telefono || '', correo:o.correo || '', empresa:o.empresa || '', puesto:o.puesto || '', factura:!!o.factura, facturasEmitidas:'', metodo:'', estatus:'Activo', plan:null, pagos:[], fiscal:{ ...(o.fiscal || {}) }, notas:'', origen:'Inscrito desde la ficha de ' + genLabel(o.generacionId) }, 'Inscrito en ' + genLabel(gid)); go('a-' + nid); }
   else if (act === 'al-new') { const gid = ui.alGen || gensConAlumnos()[0]?.id || ''; const nid = `al-${gid}-${uid('n').slice(2)}`; await save('alumnos', nid, { generacionId:gid, matricula:nuevaMatricula(), nombre:'Nuevo alumno', apellidos:'', telefono:'', correo:'', empresa:'', puesto:'', factura:false, facturasEmitidas:'', metodo:'', estatus:'Activo', plan:null, pagos:[], fiscal:{}, notas:'' }, 'Alumno creado'); go('a-' + nid); }
-  else if (act === 'pago-add') { const imp = Number($('#pg-i').value); if (!imp) { toast('Escribe el importe'); return; } const al = strip(S.alumnos[id]); const base = al.plan?.cuota; const p = { fecha:$('#pg-f').value || TODAY, importe:imp, metodo:$('#pg-m').value, folio:$('#pg-fo').value.trim(), nota:$('#pg-n').value.trim() }; if (base && imp / base > 1.03 && imp / base < 1.12) p.recargo = r2(imp - base); al.pagos = [...(al.pagos || []), p]; save('alumnos', id, al, 'Pago registrado'); }
+  else if (act === 'pago-add') { const imp = Number($('#pg-i').value); if (!imp) { toast('Escribe el importe'); return; } const al = strip(S.alumnos[id]); const base = al.plan?.montos ? null : al.plan?.cuota; const p = { fecha:$('#pg-f').value || TODAY, importe:imp, metodo:$('#pg-m').value, folio:$('#pg-fo').value.trim(), nota:$('#pg-n').value.trim() }; if (base && imp / base > 1.03 && imp / base < 1.12) p.recargo = r2(imp - base); al.pagos = [...(al.pagos || []), p]; save('alumnos', id, al, 'Pago registrado'); }
   else if (act === 'pago-del') { if (!arm(a)) return; const al = strip(S.alumnos[id]); al.pagos = (al.pagos || []).filter((_, i) => i !== Number(a.dataset.i)); save('alumnos', id, al, 'Pago eliminado'); }
   else if (act === 'cb-gen') { ui.cbGen = a.dataset.v; render(); $('#cb-gen')?.scrollIntoView({ block:'center' }); }
   else if (act === 'cb-est') { ui.cbEst = a.dataset.v; render(); }
@@ -2689,6 +2709,7 @@ document.addEventListener('click', async e => {
     if (!ex) await save('organizaciones', oid, { nombre:n, tipo:'Cámara / asociación', sector:'', programas:[], todos:false, prioridad:'Media', etapa:'Colaboración activa', colaborador:true, notas:'Alta desde Colaboración de una generación' }, 'Colaborador creado'); else if (!ex[1].colaborador) await save('organizaciones', oid, { ...strip(ex[1]), colaborador:true }, 'Guardado');
     const g = strip(S.gens[a.dataset.id]); g.colabs = [...new Set([...(g.colabs || []), oid])]; save('generaciones', a.dataset.id, g, 'Colaborador agregado'); }
   else if (act === 'logo-del') { const o = strip(S.orgs[a.dataset.id]); delete o.logo; save('organizaciones', a.dataset.id, o, 'Logo quitado'); }
+  else if (act === 'op-ocultar' || act === 'op-mostrar') { const g = strip(S.gens[id]); const v = a.dataset.v; const set = new Set(g.opcionesOcultas || []); act === 'op-ocultar' ? set.add(v) : set.delete(v); g.opcionesOcultas = [...set]; save('generaciones', id, g, act === 'op-ocultar' ? 'Opción quitada' : 'Opción restaurada'); }
   else if (act === 'usar-ph') { const g = strip(S.gens[a.dataset.id]); g.costoInscripcion = Number(a.dataset.v); save('generaciones', a.dataset.id, g, 'Costo actualizado'); }
   else if (act === 'cal-pdf') { calPdf(a.dataset.id, a.dataset.m); }
   else if (act === 'gen-view') { ui.genView = a.dataset.v; try { localStorage.setItem('educon.genView', ui.genView); } catch {} render(); }
@@ -2743,7 +2764,7 @@ $('#exp').addEventListener('click', async () => {
   const wb = XLSX.utils.book_new();
   const add = (name, rows) => { const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = Object.keys(rows[0] || {}).map(k => ({ wch: Math.min(48, Math.max(10, k.length + 2, ...rows.slice(0, 80).map(r => String(r[k] ?? '').length))) })); XLSX.utils.book_append_sheet(wb, ws, name); };
   const gs = [...D.gens].sort((a, b) => (b.sc.inicio || '0').localeCompare(a.sc.inicio || '0'));
-  add('Diplomados', gs.map(x => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nombre corto':x.g.etiqueta, 'Tipo':x.p.tipo, 'Área':x.p.area, 'Horas':x.horas || '', 'Colaboración':colabsDe(x.g).map(([, o]) => o.nombre).join(', ') || x.g.colaboracion || '', 'Coordinador':x.g.coordinador ?? x.g.responsable ?? '', 'Tel. coordinador':x.g.coordTel || '', 'Correo coordinador':x.g.coordCorreo || '', 'Salón':x.g.salon || '', 'Estatus':x.st, 'Inicio':x.sc.inicio || '', 'Inicio tentativo':x.g.inicioTentativo || '', 'Fin':x.sc.fin || '', 'Días':diasTxt(x.g), 'Horario':x.g.horario, 'Sede':x.g.sede, 'Modalidad':x.g.modalidad, 'Módulos':(x.g.modulos || []).length, 'Profes confirmados':x.conf, 'Altas':x.altas, 'Fin estimado':x.sc.finEst ? 'Sí' : '', 'Esquema de precios':x.eq ? x.eq.nombre : 'Manual', 'Precio de lista':x.eq ? x.eq.base : (x.g.costoInscripcion ?? ''), 'Opciones de pago':x.eq ? x.eq.opciones.map(o => { const t = r2(x.eq.base * (1 - o.desc / 100)); return `${o.nombre} ${o.desc}%: ${money(t)}${o.pagos > 1 ? ` (${o.pagos} × ${money(r2(t / o.pagos))})` : ''}`; }).join(' | ') : '', 'Plan de pago':x.g.planPago, 'Promoción':x.g.promocion, 'Meta de inscritos':x.g.meta ?? '', 'Inscritos':x.g.inscritos ?? '', 'Vendido':ingreso(x).total || '', 'Cobrado':ingreso(x).total ? ingreso(x).cobrado : '', 'Por cobrar':ingreso(x).total ? ingreso(x).porCobrar : '', 'Responsable':x.g.responsable, 'Preparación %':Math.round(x.prep * 100), 'Atención':x.aten, 'Pendientes':x.missing.join(' · '), 'Notas':x.g.notas })));
+  add('Diplomados', gs.map(x => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nombre corto':x.g.etiqueta, 'Tipo':x.p.tipo, 'Área':x.p.area, 'Horas':x.horas || '', 'Colaboración':colabsDe(x.g).map(([, o]) => o.nombre).join(', ') || x.g.colaboracion || '', 'Coordinador':x.g.coordinador ?? x.g.responsable ?? '', 'Tel. coordinador':x.g.coordTel || '', 'Correo coordinador':x.g.coordCorreo || '', 'Salón':x.g.salon || '', 'Estatus':x.st, 'Inicio':x.sc.inicio || '', 'Inicio tentativo':x.g.inicioTentativo || '', 'Fin':x.sc.fin || '', 'Días':diasTxt(x.g), 'Horario':x.g.horario, 'Sede':x.g.sede, 'Modalidad':x.g.modalidad, 'Módulos':(x.g.modulos || []).length, 'Profes confirmados':x.conf, 'Altas':x.altas, 'Fin estimado':x.sc.finEst ? 'Sí' : '', 'Esquema de precios':x.eq ? x.eq.nombre : 'Manual', 'Precio de lista':x.eq ? x.eq.base : (x.g.costoInscripcion ?? ''), 'Opciones de pago':x.eq ? x.eq.opciones.map(o => { const t = precioOp(x.eq, o), m = montosOp(x.eq, o); return `${o.nombre} ${o.desc}%: ${money(t)}${m.length > 1 ? ` (${m.map(money).join(' + ')})` : ''}`; }).join(' | ') : '', 'Plan de pago':x.g.planPago, 'Promoción':x.g.promocion, 'Meta de inscritos':x.g.meta ?? '', 'Inscritos':x.g.inscritos ?? '', 'Vendido':ingreso(x).total || '', 'Cobrado':ingreso(x).total ? ingreso(x).cobrado : '', 'Por cobrar':ingreso(x).total ? ingreso(x).porCobrar : '', 'Responsable':x.g.responsable, 'Preparación %':Math.round(x.prep * 100), 'Atención':x.aten, 'Pendientes':x.missing.join(' · '), 'Notas':x.g.notas })));
   add('Módulos', gs.flatMap(x => x.sc.mods.map(m => ({ 'Programa':x.nombre, 'Generación':x.gen, 'Nº':m.idx + 1, 'Módulo':m.nombre, 'Profesor(a)':profName(m.profesorId), 'Estatus profesor':m.estatusProfe, 'Alta en sistema':m.alta === true ? 'Sí' : m.alta === false ? 'No' : '', 'Clases':m.ses.length || m.clases || '', 'Inicio módulo':m.ses[0] || '', 'Fin módulo':m.ses[m.ses.length - 1] || '', 'Fechas':m.auto ? 'Automáticas' : 'Fijas' }))));
   add('Sesiones', D.ses.map(s => ({ 'Fecha':s.d, 'Día':DIAL[pd(s.d).getDay()], 'Programa':s.x.nombre, 'Generación':s.x.gen, 'Módulo':`${s.m.idx + 1}. ${s.m.nombre || ''}`, 'Sesión':s.k + 1, 'Horario':horarioDe(s.x.g, s.d), 'Sede':s.x.g.sede, 'Profesor(a)':profName(s.prof), 'Choque':s.conf ? 'Sí' : '' })));
   add('Profesores', Object.entries(S.profes).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre)).map(([id, p]) => ({ 'Nombre':p.nombre, 'Teléfono':p.telefono, 'Correo':p.correo, 'Licenciatura':p.licenciatura, 'Maestría':p.maestria, 'Doctorado':p.doctorado, 'Áreas':p.areas, 'Experiencia':p.experiencia, 'Módulos asignados':profStats(id).ms.length, 'Notas':p.notas })));
