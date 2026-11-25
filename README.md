@@ -39,6 +39,10 @@ En Asistencia → «Mostrar QR». El código vale 6 horas. El alumno lo escanea,
 
 Se cargan desde el Excel de Control de pagos con **Alumnos → Importar desde Excel**. Los datos de alumnos nunca se suben a este repositorio.
 
+## Seguimiento de cada alumno
+
+En Alumnos, la columna **Seguimiento** muestra en qué paso va cada quien: **Pago** (se marca solo cuando Cobranza registra un pago), **Factura** (la lleva Cobranza: por enviar formulario, formulario enviado, emitida), **Brightspace** (cuando Sistemas regresa los accesos) y **Accesos** (cuando se le mandan al alumno). Con el filtro de etapa puedes ver, por ejemplo, quién ya pagó y falta en Brightspace, copiar la lista para Sistemas y marcarlos todos de una vez.
+
 ## Seguridad
 
 - La llave que va en `index.html` es la **anon / public**: está hecha para ir en la página. Los datos solo se pueden leer o cambiar con sesión iniciada (reglas en `1_estructura.sql`).
